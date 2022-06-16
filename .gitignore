@@ -148,3 +148,12 @@ dmypy.json
 *.h5
 *.h5py
 
+# data
+data-refined/
+data/
+dataWithPhoto/
+icpCorrespondence/
+res-2D-3D/
+res/
+
+
