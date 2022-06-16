@@ -137,8 +137,14 @@ dmypy.json
 
 
 # Matlab
-.mat
+*.mat
+*.MAT
 
 # Mesh
-.obj
+*.obj
+*.OBJ
+
+# h5
+*.h5
+*.h5py
 
