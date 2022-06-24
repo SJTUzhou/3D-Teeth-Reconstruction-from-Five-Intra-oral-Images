@@ -47,11 +47,11 @@ MASK_NPY = os.path.join(SRC_PARAM_DIR, "X_mask.npy")
 
 MATLAB_PATH = r"./matlab_script"
 # FOLD_IDX = 5 # change this index each fold
-VERSION = "v4" # version of teeth silouette extraction model
+VERSION = "v14" # version of teeth silouette extraction model
 # EDGE_MASK_PATH = r"./dataWithPhoto/learning/fold{}/test/pred-{}/".format(FOLD_IDX,VERSION)
-STAGE0_MAT_DIR = os.path.join(MATLAB_PATH, "stage0-mat-test")
-DEMO_H5_DIR = r"./dataWithPhoto/demo-test/"
-DEMO_MESH_DIR = r"./dataWithPhoto/demoMesh-test/"
+STAGE0_MAT_DIR = os.path.join(MATLAB_PATH, "stage0-mat")
+DEMO_H5_DIR = r"./dataWithPhoto/demo/"
+DEMO_MESH_DIR = r"./dataWithPhoto/demoMesh/"
 NAME_IDX_CSV = pd.read_csv(NAME_IDX_MAP_CSV)
 
 LOG_DIR = r"./dataWithPhoto/log/"
@@ -398,7 +398,7 @@ def evaluation(TagID):
 
     # Open our existing CSV file in append mode
     # Create a file object for this file
-    with open(r'./dataWithPhoto/temp_result_fold{}.csv'.format(FOLD_IDX), 'a', newline='') as f_object:
+    with open(r'./dataWithPhoto/_temp/temp_result_fold{}.csv'.format(FOLD_IDX), 'a', newline='') as f_object:
         writer_object = csv.writer(f_object)
         writer_object.writerow([patientID,RMSE_pred,RMSD_pred,ASSD_pred,HD_pred,RMSE_T_pred,RMSD_T_pred,ASSD_T_pred,HD_T_pred,avg_Dice,avg_VOE])
         f_object.close()
@@ -460,7 +460,7 @@ if __name__ == "__main__":
     
     if len(sys.argv) > 1:
         # phase 2
-        FOLD_IDX = int(sys.argv[1])
+        FOLD_IDX = int(sys.argv[1]) # command line argument: Fold_Index
         EDGE_MASK_PATH = r"./dataWithPhoto/learning/fold{}/test/pred-{}/".format(FOLD_IDX, VERSION)
         ENGINE = None
         main(phase=2)

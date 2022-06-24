@@ -423,7 +423,7 @@ def train():
     model = ASPP_Res_UNet(IMG_SHAPE, filters=[16,32,64,128,256]) # VERSION: v14(L_Dice+SSIM) EXPANSION_RATE=3
     # model = ASPP_Res_UNet(IMG_SHAPE, filters=[16,32,64,128,256]) # VERSION: v15(BCE+SSIM) EXPANSION_RATE=3
     
-    print(model.summary())
+    # print(model.summary())
 
     train_image, train_label = get_data_filenames(TRAIN_PATH)
     valid_image, valid_label = get_data_filenames(VALID_PATH)
@@ -447,7 +447,7 @@ def train():
 
     print(weight_ckpt)
     model_checkpoint = ModelCheckpoint(weight_ckpt, monitor='val_loss',verbose=2, save_best_only=True, save_weights_only=True)
-    ret = model.fit(x=train_dg, validation_data=valid_dg, epochs=50, verbose=2, callbacks=[model_checkpoint])
+    # ret = model.fit(x=train_dg, validation_data=valid_dg, epochs=50, verbose=2, callbacks=[model_checkpoint])
     model.load_weights(weight_ckpt)
 
     return model
@@ -457,7 +457,7 @@ def train():
 
 
 if __name__ == "__main__":
-    for FOLD_IDX in [2,]:#[5,4,3,2,1]:
+    for FOLD_IDX in [4,3]:#[5,4,3,2,1]:
         ROOT_DIR = r"./dataWithPhoto/learning/fold{}/".format(FOLD_IDX)
         TRAIN_PATH = os.path.join(ROOT_DIR, r"train/")
         VALID_PATH = os.path.join(ROOT_DIR, r"test/")
@@ -465,9 +465,9 @@ if __name__ == "__main__":
         if not os.path.exists(VALID_PRED_PATH):
             os.makedirs(VALID_PRED_PATH)
         LogFile = os.path.join(ROOT_DIR, "train-{}.log".format(VERSION))
-        # Log file
-        if os.path.exists(LogFile):
-            os.remove(LogFile)
+        # # Log file
+        # if os.path.exists(LogFile):
+        #     os.remove(LogFile)
         log = open(LogFile, "a", encoding='utf-8')
         sys.stdout = log
         
