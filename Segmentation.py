@@ -10,7 +10,7 @@ from tensorflow.keras.callbacks import ModelCheckpoint
 import functools
 
  
-VERSION = "v14"
+VERSION = "v12"
 IMG_SHAPE = (512, 512, 3)
 LBL_SHAPE = IMG_SHAPE[:2]
 LOW_MEMORY = True
@@ -418,12 +418,12 @@ def train():
     # model = ASPP_UNet2018(IMG_SHAPE, filters=[16,32,64,128,256]) # VERSION: v10(L_Dice+0.01*L_HD)
 
     # model = ASPP_UNet2018(IMG_SHAPE, filters=[16,32,64,128,256]) # VERSION: v11(L_Dice) EXPANSION_RATE=3
-    # model = ASPP_UNet2018(IMG_SHAPE, filters=[16,32,64,128,256]) # VERSION: v12(BCE+SSIM) EXPANSION_RATE=3
+    model = ASPP_UNet2018(IMG_SHAPE, filters=[16,32,64,128,256]) # VERSION: v12(BCE+SSIM) EXPANSION_RATE=3
     # model = ASPP_Res_UNet(IMG_SHAPE, filters=[16,32,64,128,256]) # VERSION: v13(L_Dice) EXPANSION_RATE=3
-    model = ASPP_Res_UNet(IMG_SHAPE, filters=[16,32,64,128,256]) # VERSION: v14(L_Dice+SSIM) EXPANSION_RATE=3
+    # model = ASPP_Res_UNet(IMG_SHAPE, filters=[16,32,64,128,256]) # VERSION: v14(L_Dice+SSIM) EXPANSION_RATE=3
     # model = ASPP_Res_UNet(IMG_SHAPE, filters=[16,32,64,128,256]) # VERSION: v15(BCE+SSIM) EXPANSION_RATE=3
     
-    # print(model.summary())
+    print(model.summary())
 
     train_image, train_label = get_data_filenames(TRAIN_PATH)
     valid_image, valid_label = get_data_filenames(VALID_PATH)
@@ -437,17 +437,17 @@ def train():
 
     # train
     # weight_ckpt = os.path.join(ROOT_DIR, r'weights-dice-50-{}.h5'.format(VERSION))
-    # weight_ckpt = os.path.join(ROOT_DIR, r'weights-bce-ssim-50-{}.h5'.format(VERSION))
-    weight_ckpt = os.path.join(ROOT_DIR, r'weights-dice-ssim-50-{}.h5'.format(VERSION))
+    weight_ckpt = os.path.join(ROOT_DIR, r'weights-bce-ssim-50-{}.h5'.format(VERSION))
+    # weight_ckpt = os.path.join(ROOT_DIR, r'weights-dice-ssim-50-{}.h5'.format(VERSION))
     
     # model.compile(optimizer=keras.optimizers.Adam(learning_rate=.0005), loss=dice_loss)
-    # model.compile(optimizer=keras.optimizers.Adam(learning_rate=.0005), loss=BCE_SSIM_loss)
-    model.compile(optimizer=keras.optimizers.Adam(learning_rate=.0005), loss=Dice_SSIM_loss)
+    model.compile(optimizer=keras.optimizers.Adam(learning_rate=.0005), loss=BCE_SSIM_loss)
+    # model.compile(optimizer=keras.optimizers.Adam(learning_rate=.0005), loss=Dice_SSIM_loss)
     
 
     print(weight_ckpt)
     model_checkpoint = ModelCheckpoint(weight_ckpt, monitor='val_loss',verbose=2, save_best_only=True, save_weights_only=True)
-    # ret = model.fit(x=train_dg, validation_data=valid_dg, epochs=50, verbose=2, callbacks=[model_checkpoint])
+    ret = model.fit(x=train_dg, validation_data=valid_dg, epochs=50, verbose=2, callbacks=[model_checkpoint])
     model.load_weights(weight_ckpt)
 
     return model
