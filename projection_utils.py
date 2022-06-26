@@ -1,6 +1,7 @@
 import glob
 import os
 import numpy as np
+import enum
 import pandas as pd
 import open3d as o3d
 from matplotlib import pyplot as plt
@@ -40,6 +41,16 @@ MASK_FRONTAL = np.array([ True,  True,  True,  True,  False,  False,  False,  # 
                   True,  True,  True,  True,  False,  False,  False])
 
 
+@enum.unique
+class PHOTO(enum.Enum):
+    # Enum values must be 0,1,2,3,4 
+    UPPER = 0
+    LOWER = 1
+    LEFT = 2
+    RIGHT = 3
+    FRONTAL = 4
+
+
 
 
 #####################################################
@@ -67,7 +78,7 @@ def getEdgeMask(edge_mask_path, name_idx_df, TagID, photo_types, resized_width=8
         edgeMasks.append(edgeMask)
     return edgeMasks
 
-def getPhotos(photo_path, name_idx_df, TagID, photo_types, resized_width=1440):
+def getPhotos(photo_path, name_idx_df, TagID, photo_types, new_shape=(1080,1440)):
     # 获取指定TagID的病人的五张二值牙齿边界图片
     photoFiles = name_idx_df.loc[name_idx_df["index"]==TagID, photo_types].values[0]
     photoFiles = [os.path.join(photo_path, os.path.splitext(os.path.basename(pf))[0]+".png") for pf in photoFiles]
@@ -75,8 +86,7 @@ def getPhotos(photo_path, name_idx_df, TagID, photo_types, resized_width=1440):
     photos = []
     for photoFile in photoFiles:
         photo = skimage.io.imread(photoFile, as_gray=False)
-        rescale = resized_width / photo.shape[1]
-        photo = skimage.transform.rescale(photo, rescale, anti_aliasing=True)
+        photo = skimage.transform.resize(photo, new_shape, anti_aliasing=True)
         photos.append(photo)
     return photos
 
@@ -149,44 +159,6 @@ def GetPgRefUL(PgRef, Mask):
 #####################################################
 
 
-# def loadInvRegistrationParams(loadDir):
-#     """生成DataFrame,含有逆配准参数s,R,transVec,transVecShift"""
-#     """initPG = np.multiply(s, np.matmul(PG+transVec, R)) + transVecShift"""
-#     toothIndices = UPPER_INDICES + LOWER_INDICES
-#     paramDF = pd.DataFrame(columns=["tag"])
-#     # 下牙列逆配准参数
-#     tags, rowScales, transVecShifts = utils.readToothRowScalesFromHDF5(os.path.join(loadDir, "scalesOfLowerToothRow.hdf5"), "L")
-#     indexTag = [int(tag[:-1]) for tag in tags]
-#     invScales = [1./s for s in rowScales]
-#     invTransVecShifts = -transVecShifts
-#     tempDF = pd.DataFrame({"tag":indexTag,"lower_s":list(invScales), "lower_ts":list(invTransVecShifts)})
-#     paramDF = paramDF.merge(tempDF, how="outer", on="tag")
-#     # 上牙列逆配准参数
-#     tags, rowScales, transVecShifts = utils.readToothRowScalesFromHDF5(os.path.join(loadDir, "scalesOfUpperToothRow.hdf5"), "U")
-#     indexTag = [int(tag[:-1]) for tag in tags]
-#     invScales = [1./s for s in rowScales]
-#     invTransVecShifts = -transVecShifts
-#     tempDF = pd.DataFrame({"tag":indexTag,"upper_s":list(invScales), "upper_ts":list(invTransVecShifts)})
-#     paramDF = paramDF.merge(tempDF, how="outer", on="tag")
-#     # 牙齿统计形状逆配准参数
-#     for i in toothIndices:
-#         h5File = os.path.join(loadDir, "sRtParams_{}.hdf5".format(i))
-#         tags, scales, rotMats, transVecs = utils.readRegistrationParamsFromHDF5(h5File, i)
-#         indexTag = [int(tag[:-1]) for tag in tags]
-#         invRotAngles = np.array([utils.rotationMatrixToEulerAngles(r.T) for r in rotMats])
-#         invScales = 1./scales
-#         invTransVecs = -transVecs
-#         tempDF = pd.DataFrame({"tag":indexTag,"{}s".format(i):list(invScales), "{}rx".format(i):list(invRotAngles[:,0]), \
-#                                "{}ry".format(i):list(invRotAngles[:,1]), "{}rz".format(i):list(invRotAngles[:,2]), \
-#                                "{}tx".format(i):list(invTransVecs[:,0]), "{}ty".format(i):list(invTransVecs[:,1]), \
-#                                "{}tz".format(i):list(invTransVecs[:,2])})
-#         paramDF = paramDF.merge(tempDF, how="outer", on="tag")
-#     sUpperColumns = ["{}s".format(id) for id in UPPER_INDICES]
-#     sLowerColumns = ["{}s".format(id) for id in LOWER_INDICES]
-#     paramDF = paramDF[~paramDF[sUpperColumns].isna().all(axis=1)]
-#     paramDF = paramDF[~paramDF[sLowerColumns].isna().all(axis=1)] # 删除缺少上牙列或下牙列的数据
-#     paramDF = paramDF.sort_values(by="tag", ignore_index=True)
-#     return paramDF
 def loadInvRegistrationParams(loadDir):
     """生成DataFrame,含有逆配准参数s,R,transVec,transVecShift"""
     """initPG = np.multiply(s, np.matmul(PG+transVec, R)) + transVecShift"""
@@ -226,30 +198,7 @@ def loadInvRegistrationParams(loadDir):
     paramDF = paramDF.sort_values(by="tag", ignore_index=True)
     return paramDF
 
-# def getScalesRxyzTxyzRotMats(invParamDF, index):
-#     """计算s,rxyz,txyz,rotMats (nan用0填充)
-#     txyz = np.multiply(s, np.matmul(transVec, rotMats)) + transVecShift"""
-#     toothIndices = UPPER_INDICES + LOWER_INDICES
-#     numTooth = len(toothIndices)
-#     sColumns = ["{}s".format(id) for id in toothIndices]
-#     rxyzColumns = ["{}r{}".format(id, p) for id in toothIndices for p in ["x","y","z"]]
-#     postTxyzColumns = ["{}t{}".format(id, p) for id in toothIndices for p in ["x","y","z"]]
-#     indexedRow = invParamDF[invParamDF["tag"]==index]
-    
-#     scales = indexedRow[sColumns].values.flatten().tolist()
-#     scales = np.nan_to_num(scales, nan=0.0)
-#     scales = np.array(scales)[:,np.newaxis,np.newaxis]
-    
-#     rxyzs = indexedRow[rxyzColumns].to_numpy().reshape(numTooth, 3)
-#     rotMats = [utils.getRotMat(rxyz) if not np.isnan(rxyz).any() else np.zeros((3,3)) for rxyz in rxyzs]
-    
-#     postTxyzs = indexedRow[postTxyzColumns].to_numpy().reshape(numTooth, 3)
-#     transVecs = np.nan_to_num(postTxyzs, nan=0.0)
-#     transVecShifts = np.vstack([indexedRow["upper_ts"].values[0],indexedRow["lower_ts"].values[0]])
-#     transVecShifts = np.nan_to_num(transVecShifts, nan=0.0)
-#     txyzs = np.multiply(scales, np.matmul(np.array(transVecs)[:,np.newaxis,:], np.array(rotMats))) + np.array(transVecShifts)[:,np.newaxis,:]
-    
-#     return scales, np.array(rxyzs), np.array(txyzs), np.array(rotMats)
+
 def getScalesRxyzTxyzRotMats(invParamDF, index):
     """计算s,rxyz,txyz,rotMats (nan用0填充)
     txyz = np.multiply(s, np.matmul(transVec, rotMats)) + transVecShift"""
@@ -306,33 +255,6 @@ def loadDataSet(invParamDF, Mu, Sigma, pgShape, srcRootDir):
         print("Load {}/{}".format(i+1,len(invParamDF["tag"].values)))
     return X_pg, Y_mask, Y_scale, Y_rxyz, Y_txyz, Y_fVec
 
-
-# def updateAbsTransVecs(invParamDF, Mu):
-#     """将牙列transVecShift融入txyz中，忽略牙列scale的影响，并且将txyz定义在局部坐标系下"""
-#     toothIndices = UPPER_INDICES+LOWER_INDICES
-#     invParamCopy = invParamDF.copy()
-#     numSample = invParamDF.shape[0]
-#     numTooth = len(toothIndices)
-#     X_Mu_centroids = {tID:Mu[i].mean(axis=0) for i,tID in enumerate(toothIndices)}
-#     invScalesColumns = ["{}s".format(id) for id in toothIndices]
-#     invRotAngleXYZColumns = ["{}r{}".format(id, p) for id in toothIndices for p in ["x","y","z"]]
-#     invTransVecXYZColumns = ["{}t{}".format(id, p) for id in toothIndices for p in ["x","y","z"]]
-#     invTransVecShiftColumns = ["upper_ts", "lower_ts"]
-#     invScales = invParamDF[invScalesColumns].to_numpy()
-#     invRotAngles = invParamDF[invRotAngleXYZColumns].to_numpy().reshape(numSample, numTooth, 3)
-#     invTransVecs = invParamDF[invTransVecXYZColumns].to_numpy().reshape(numSample, numTooth, 3)
-#     invTransVecShifts = np.concatenate([np.stack(invParamDF["upper_ts"].to_list()), np.stack(invParamDF["lower_ts"].to_list())], axis=1)
-    
-#     for i in range(numSample):
-#         for j,tID in enumerate(toothIndices):
-#             rxyz = invRotAngles[i,j]
-#             invRotMat = utils.getRotMat(rxyz) if not np.isnan(rxyz).any() else np.identity(3)
-#             invTx, invTy, invTz = - X_Mu_centroids[tID] + invScales[i,j] * (invTransVecs[i,j] + X_Mu_centroids[tID] - invTransVecShifts[i,j]) @ invRotMat
-#             invParamCopy.loc[i,"{}tx".format(tID)] = invTx
-#             invParamCopy.loc[i,"{}ty".format(tID)] = invTy
-#             invParamCopy.loc[i,"{}tz".format(tID)] = invTz
-#     invParamCopy = invParamCopy.drop(labels=["upper_s", "lower_s", "upper_ts", "lower_ts"], axis=1)
-#     return invParamCopy
 
 def updateAbsTransVecs(invParamDF, Mu):
     """将牙列transVecShift融入txyz中，忽略牙列scale的影响，并且将txyz定义在局部坐标系下"""

@@ -1,45 +1,41 @@
 import open3d as o3d
 import os
+import copy
 import numpy as np
+import pandas as pd
 import open3d.visualization.rendering as rendering
 import open3d.visualization as visualization
 import skimage
 from scipy.spatial.transform import Rotation as RR
 import projection_utils as proj
+from projection_utils import PHOTO
 
 
 
-H5_DIR = r"./"
-MESH_DIR = r"./"
-IMG_DIR = r"./image/"
-TAG_ID = 63
-DEMO_H5_FILE = os.path.join(H5_DIR, r"demo_TagID={}.h5".format(TAG_ID))
-UPPER_TEETH_MESH_OBJ = os.path.join(MESH_DIR, r"Aligned_Pred_Upper_Mesh_TagID={}.obj".format(TAG_ID))
-LOWER_TEETH_MESH_OBJ = os.path.join(MESH_DIR, r"Aligned_Pred_Lower_Mesh_TagID={}.obj".format(TAG_ID))
-IMG_FILE = os.path.join(IMG_DIR, r"安然_219474_下牙列.png")
+H5_DIR = r"./dataWithPhoto/demo/"
+MESH_DIR = r"./dataWithPhoto/demoMesh/"
+PHOTO_DIR = r"./dataWithPhoto/normal_resized/"
 IMG_WIDTH = 800
 IMG_HEIGHT = 600
-
+OUTPUT_DIR = r"./dataWithPhoto/photoWithMeshProjected/"
+NAME_IDX_MAP_CSV = r"./dataWithPhoto/nameIndexMapping.csv"
+NAME_IDX_MAP = pd.read_csv(NAME_IDX_MAP_CSV)
+PHOTO_ORDER = [PHOTO.UPPER, PHOTO.LOWER, PHOTO.LEFT, PHOTO.RIGHT, PHOTO.FRONTAL]
+PHOTO_TYPES = ["upperPhoto","lowerPhoto","leftPhoto","rightPhoto","frontalPhoto"]
 
 
 def proj_msh_on_img(img, o3dMsh, fx, fy, cx, cy):
-
     img_height, img_width = img.shape[:2]
     # Create a renderer with a set image width and height
     render = rendering.OffscreenRenderer(img_width, img_height)
-
     # setup camera intrinsic values
     pinhole = o3d.camera.PinholeCameraIntrinsic(img_width, img_height, fx, fy, cx, cy)
-        
     # Pick a background colour of the rendered image, I set it as black (default is light gray)
     render.scene.set_background([0.0, 0.0, 0.0, 1.0])  # RGBA
-
-    # Define a simple unlit Material.
     # (The base color does not replace the mesh's own colors.)
     mtl = o3d.visualization.rendering.MaterialRecord()
     mtl.base_color = [1.0, 1.0, 1.0, 1.0]  # RGBA
     mtl.shader = "normals" # "defaultLitTransparency" # "normals" # "defaultLit"
-
     # add mesh to the scene
     render.scene.add_geometry("Mesh Model", o3dMsh, mtl)
     # render the scene with respect to the camera
@@ -54,77 +50,89 @@ def proj_msh_on_img(img, o3dMsh, fx, fy, cx, cy):
     # print(render.scene.camera.get_view_matrix()) # view matrix
     # print(render.scene.camera.get_model_matrix()) # model matrix 
     # print(render.scene.camera.get_projection_matrix()) # projection matrix
-    
-
     img_o3d = render.render_to_image()
-
     # we can now save the rendered image right at this point 
     o3d.io.write_image("output.png", img_o3d, 9)
 
 
 
-def main():
-    ex_rxyz, ex_txyz, focLth, dpix, u0, v0, rela_R, rela_t = proj.readCameraParamsFromH5(h5File=DEMO_H5_FILE, patientId=TAG_ID)
-    imgUpper = skimage.io.imread(IMG_FILE)
-    imgUpper = skimage.transform.resize(imgUpper, (IMG_HEIGHT, IMG_WIDTH, 3), anti_aliasing=True)
-    print(UPPER_TEETH_MESH_OBJ)
-    upperTeethO3dMsh = o3d.io.read_triangle_mesh(LOWER_TEETH_MESH_OBJ)
-    upperTeethO3dMsh.paint_uniform_color([0.8, 0.8, 0.8])
-    idx = 1
-    f = focLth / dpix
-    rotMat = RR.from_euler("xyz", ex_rxyz[idx]).as_matrix()
-    upperTeethO3dMsh.rotate(rotMat, center=(0,0,0))
-    upperTeethO3dMsh.translate(ex_txyz[idx])
-    upperTeethO3dMsh.compute_vertex_normals()
 
-    # _vertices = np.asarray(upperTeethO3dMsh.vertices)
-    # print(np.max(_vertices,axis=0))
-    # print(np.min(_vertices,axis=0))
-    # o3d.visualization.draw_geometries([upperTeethO3dMsh,], window_name="", width=800, height=600, left=50,top=50)
-    # proj_msh_on_img(imgUpper, upperTeethO3dMsh, fx=f[idx], fy=f[idx], cx=u0[idx], cy=v0[idx])
-
-
-    vis = o3d.visualization.Visualizer()
-    vis.create_window(window_name="", visible=True, width=IMG_WIDTH, height=IMG_HEIGHT)
-    vis.add_geometry(upperTeethO3dMsh)
-
-    viewControl = vis.get_view_control()
-    # viewControl.set_front([0,0,-1])
-    # viewControl.set_lookat([0,0,0])
-    # viewControl.set_up([0,-1,0])
+def generateProjectedMeshImg(tagID, visualizer, ulTeethMshes, phType, ex_rxyz, ex_txyz, fx, u0, v0, rela_R, rela_t):
+    visualizer.clear_geometries()
+    ph = phType.value
+    msh = None
+    if phType in [PHOTO.UPPER, PHOTO.LOWER]:
+        msh = copy.deepcopy(ulTeethMshes[ph])
+    else: # [PHOTO.LEFT, PHOTO.RIGHT, PHOTO.FRONTAL]]
+        uMsh = copy.deepcopy(ulTeethMshes[0])
+        lMsh = copy.deepcopy(ulTeethMshes[1])
+        lMsh.rotate(rela_R.T, center=(0,0,0))
+        lMsh.translate(rela_t)
+        msh = uMsh + lMsh # merge meshes
+    rotMat = RR.from_euler("xyz", ex_rxyz[ph]).as_matrix()
+    msh.rotate(rotMat, center=(0,0,0))
+    msh.translate(ex_txyz[ph])
+    visualizer.add_geometry(msh)
+    viewControl = visualizer.get_view_control()
     pinholeParams = o3d.camera.PinholeCameraParameters()
-    pinholeParams.intrinsic = o3d.camera.PinholeCameraIntrinsic(IMG_WIDTH, IMG_HEIGHT, f[idx], f[idx], u0[idx], v0[idx])  # 399.5, 299.5)
-    pinholeParams.extrinsic = np.array([[1,0,0,0],[0,1,0,0],[0,0,1,0],[0,0,0,1]])
+    pinholeParams.intrinsic = o3d.camera.PinholeCameraIntrinsic(IMG_WIDTH, IMG_HEIGHT, fx[ph], fx[ph], u0[ph], v0[ph])  # 399.5, 299.5)
+    pinholeParams.extrinsic = np.identity(4)
     viewControl.convert_from_pinhole_camera_parameters(pinholeParams, allow_arbitrary=True)
+    # camera_parameters = viewControl.convert_to_pinhole_camera_parameters()
+    # print("Camera parameters\n{}\n{}".format(camera_parameters.extrinsic, camera_parameters.intrinsic.intrinsic_matrix))
+    visualizer.update_geometry(msh)
+    visualizer.poll_events()
+    visualizer.update_renderer()
 
-
-    camera_parameters = viewControl.convert_to_pinhole_camera_parameters()
-    print("Camera parameters\n{}\n{}".format(camera_parameters.extrinsic, camera_parameters.intrinsic.intrinsic_matrix))
-    
-
-    opt = vis.get_render_option()
-    opt.background_color = np.asarray([0, 0, 0])
-    vis.run()
-
-    # vis.capture_screen_image("output.png", do_render=True)
-    o3dImg = vis.capture_screen_float_buffer(do_render=True)
     _u0 = IMG_WIDTH / 2 - 0.5
     _v0 = IMG_HEIGHT / 2 - 0.5
-    img = np.asarray(o3dImg)
-    tForm = skimage.transform.EuclideanTransform(rotation=None, translation=np.array([ _u0-u0[idx], _v0-v0[idx]]), dimensionality=2)
+    img = np.asarray(visualizer.capture_screen_float_buffer(do_render=True))
+    tForm = skimage.transform.EuclideanTransform(rotation=None, translation=np.array([ _u0-u0[ph], _v0-v0[ph]]), dimensionality=2)
     shiftedImg = skimage.transform.warp(img, tForm)
-    skimage.io.imsave("output.png", shiftedImg)
+    return shiftedImg
+
+
+
+def meshProjection(visualizer, tagID):
+    demoH5File = os.path.join(H5_DIR, r"demo_TagID={}.h5".format(tagID))
+    upperTeethObj = os.path.join(MESH_DIR, str(tagID), r"Aligned_Pred_Upper_Mesh_TagID={}.obj".format(tagID))
+    lowerTeethObj = os.path.join(MESH_DIR, str(tagID), r"Aligned_Pred_Lower_Mesh_TagID={}.obj".format(tagID))
+    ex_rxyz, ex_txyz, focLth, dpix, u0, v0, rela_R, rela_t = proj.readCameraParamsFromH5(h5File=demoH5File, patientId=tagID)
+    fx = focLth / dpix
+
+    photos = proj.getPhotos(PHOTO_DIR, NAME_IDX_MAP, tagID, PHOTO_TYPES, (IMG_HEIGHT, IMG_WIDTH))
+
+    upperTeethO3dMsh = o3d.io.read_triangle_mesh(upperTeethObj)
+    upperTeethO3dMsh.paint_uniform_color([0.8, 0.8, 0.8])
+    upperTeethO3dMsh.compute_vertex_normals()
+
+    lowerTeethO3dMsh = o3d.io.read_triangle_mesh(lowerTeethObj)
+    lowerTeethO3dMsh.paint_uniform_color([0.8, 0.8, 0.8])
+    lowerTeethO3dMsh.compute_vertex_normals()
+
+    for phType, img in zip(PHOTO_ORDER, photos):
+        mshImg = generateProjectedMeshImg(tagID, visualizer, [upperTeethO3dMsh,lowerTeethO3dMsh], phType, ex_rxyz, ex_txyz, fx, u0, v0, rela_R, rela_t)
+        _mask = mshImg > 0
+        np.putmask(img, _mask, 0.5*mshImg+0.5*img)
+        output = img
+        output_img_file = os.path.join(OUTPUT_DIR, "{}-{}.png".format(tagID, str(phType)))
+        print(output_img_file)
+        skimage.io.imsave(output_img_file, skimage.img_as_ubyte(output))
+
+
+
+
+def main():
+    vis = o3d.visualization.Visualizer()
+    vis.create_window(window_name="Image Screen Shot", visible=True, width=IMG_WIDTH, height=IMG_HEIGHT)
+    opt = vis.get_render_option()
+    opt.background_color = np.asarray([0, 0, 0])
+    # vis.run() # block the visualizer
+    for tagID in range(0,95):
+        meshProjection(vis, tagID)
     vis.destroy_window()
 
-
-    # save image 
-
-
-
-    # image translation
-
     
-
 
 
 
