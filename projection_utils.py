@@ -492,3 +492,16 @@ def readDemoFromH5(h5File, patientId):
         rela_R = grp["RELA_R"][:]
         rela_t = grp["RELA_T"][:]
     return X_Mu_Upper, X_Mu_Lower, X_Pred_Upper, X_Pred_Lower, X_Ref_Upper, X_Ref_Lower, rela_R, rela_t
+
+def readCameraParamsFromH5(h5File, patientId):
+    with h5py.File(h5File, 'r') as f:
+        grp = f[str(patientId)]
+        ex_rxyz = grp["EX_RXYZ"][:]
+        ex_txyz = grp["EX_TXYZ"][:]
+        focLth = grp["FOCLTH"][:]
+        dpix = grp["DPIX"][:]
+        u0 = grp["U0"][:]
+        v0 = grp["V0"][:]
+        rela_R = grp["RELA_R"][:]
+        rela_t = grp["RELA_T"][:]
+        return ex_rxyz, ex_txyz, focLth, dpix, u0, v0, rela_R, rela_t
