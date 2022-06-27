@@ -421,6 +421,11 @@ def createAlignedPredMeshes(TagID):
     Ref_Upper_Mesh = utils.mergeO3dTriangleMeshes(X_Ref_Upper_Meshes)
     Ref_Lower_Mesh = utils.mergeO3dTriangleMeshes(X_Ref_Lower_Meshes)
 
+    X_Pred_Upper_Meshes = [utils.surfaceVertices2WatertightO3dMesh(pg) for pg in X_Pred_Upper]
+    X_Pred_Lower_Meshes = [utils.surfaceVertices2WatertightO3dMesh(pg) for pg in X_Pred_Lower]
+    Pred_Upper_Mesh = utils.mergeO3dTriangleMeshes(X_Pred_Upper_Meshes)
+    Pred_Lower_Mesh = utils.mergeO3dTriangleMeshes(X_Pred_Lower_Meshes)
+
     TX_Pred_Upper_Meshes = [utils.surfaceVertices2WatertightO3dMesh(pg) for pg in TX_Pred_Upper]
     TX_Pred_Lower_Meshes = [utils.surfaceVertices2WatertightO3dMesh(pg) for pg in TX_Pred_Lower]
     Aligned_Pred_Upper_Mesh = utils.mergeO3dTriangleMeshes(TX_Pred_Upper_Meshes)
@@ -433,6 +438,10 @@ def createAlignedPredMeshes(TagID):
                         os.path.join(demoMeshDir,"Ref_Upper_Mesh_TagID={}.obj".format(patientID)))
     utils.exportTriMeshObj(np.asarray(Ref_Lower_Mesh.vertices), np.asarray(Ref_Lower_Mesh.triangles), \
                         os.path.join(demoMeshDir,"Ref_Lower_Mesh_TagID={}.obj".format(patientID)))
+    utils.exportTriMeshObj(np.asarray(Pred_Upper_Mesh.vertices), np.asarray(Pred_Upper_Mesh.triangles), \
+                        os.path.join(demoMeshDir,"Pred_Upper_Mesh_TagID={}.obj".format(patientID)))
+    utils.exportTriMeshObj(np.asarray(Pred_Lower_Mesh.vertices), np.asarray(Pred_Lower_Mesh.triangles), \
+                        os.path.join(demoMeshDir,"Pred_Lower_Mesh_TagID={}.obj".format(patientID)))
     utils.exportTriMeshObj(np.asarray(Aligned_Pred_Upper_Mesh.vertices), np.asarray(Aligned_Pred_Upper_Mesh.triangles), \
                         os.path.join(demoMeshDir,"Aligned_Pred_Upper_Mesh_TagID={}.obj".format(patientID)))
     utils.exportTriMeshObj(np.asarray(Aligned_Pred_Lower_Mesh.vertices), np.asarray(Aligned_Pred_Lower_Mesh.triangles), \
@@ -465,19 +474,19 @@ if __name__ == "__main__":
         ENGINE = None
         main(phase=2)
     else:
-        # phase 0 & 1
-        NUM_CPUS = psutil.cpu_count(logical=False)
-        ray.init(num_cpus=NUM_CPUS, num_gpus=1) #ray(多线程)初始化
-        ENGINE = matlab.engine.connect_matlab()
-        ENGINE.addpath(MATLAB_PATH)
-        for FOLD_IDX in [5,4,3,2,1]:
-            EDGE_MASK_PATH = r"./dataWithPhoto/learning/fold{}/test/pred-{}/".format(FOLD_IDX, VERSION)
-            main(phase=0)
-            main(phase=1)
-
-        # # create demo triangle meshes
-        # NUM_CPUS = psutil.cpu_count(logical=False) 
+        # # phase 0 & 1
+        # NUM_CPUS = psutil.cpu_count(logical=False)
         # ray.init(num_cpus=NUM_CPUS, num_gpus=1) #ray(多线程)初始化
-        # ray.get([createAlignedPredMeshes.remote(TagID) for TagID in TagIDs])
+        # ENGINE = matlab.engine.connect_matlab()
+        # ENGINE.addpath(MATLAB_PATH)
+        # for FOLD_IDX in [5,4,3,2,1]:
+        #     EDGE_MASK_PATH = r"./dataWithPhoto/learning/fold{}/test/pred-{}/".format(FOLD_IDX, VERSION)
+        #     main(phase=0)
+        #     main(phase=1)
+
+        # create demo triangle meshes
+        NUM_CPUS = psutil.cpu_count(logical=False) 
+        ray.init(num_cpus=NUM_CPUS, num_gpus=1) #ray(多线程)初始化
+        ray.get([createAlignedPredMeshes.remote(TagID) for TagID in TagIDs])
 
     

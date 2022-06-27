@@ -15,9 +15,11 @@ from projection_utils import PHOTO
 H5_DIR = r"./dataWithPhoto/demo/"
 MESH_DIR = r"./dataWithPhoto/demoMesh/"
 PHOTO_DIR = r"./dataWithPhoto/normal_resized/"
+EDGE_DIR = r"./dataWithPhoto/normal_mask/"
 IMG_WIDTH = 800
 IMG_HEIGHT = 600
 OUTPUT_DIR = r"./dataWithPhoto/photoWithMeshProjected/"
+# OUTPUT_DIR = r"./dataWithPhoto/photoWithMeshProjected/Edge/"
 NAME_IDX_MAP_CSV = r"./dataWithPhoto/nameIndexMapping.csv"
 NAME_IDX_MAP = pd.read_csv(NAME_IDX_MAP_CSV)
 PHOTO_ORDER = [PHOTO.UPPER, PHOTO.LOWER, PHOTO.LEFT, PHOTO.RIGHT, PHOTO.FRONTAL]
@@ -95,12 +97,13 @@ def generateProjectedMeshImg(tagID, visualizer, ulTeethMshes, phType, ex_rxyz, e
 
 def meshProjection(visualizer, tagID):
     demoH5File = os.path.join(H5_DIR, r"demo_TagID={}.h5".format(tagID))
-    upperTeethObj = os.path.join(MESH_DIR, str(tagID), r"Aligned_Pred_Upper_Mesh_TagID={}.obj".format(tagID))
-    lowerTeethObj = os.path.join(MESH_DIR, str(tagID), r"Aligned_Pred_Lower_Mesh_TagID={}.obj".format(tagID))
+    upperTeethObj = os.path.join(MESH_DIR, str(tagID), r"Pred_Upper_Mesh_TagID={}.obj".format(tagID))
+    lowerTeethObj = os.path.join(MESH_DIR, str(tagID), r"Pred_Lower_Mesh_TagID={}.obj".format(tagID))
     ex_rxyz, ex_txyz, focLth, dpix, u0, v0, rela_R, rela_t = proj.readCameraParamsFromH5(h5File=demoH5File, patientId=tagID)
     fx = focLth / dpix
 
     photos = proj.getPhotos(PHOTO_DIR, NAME_IDX_MAP, tagID, PHOTO_TYPES, (IMG_HEIGHT, IMG_WIDTH))
+    # photos = proj.getPhotos(EDGE_DIR, NAME_IDX_MAP, tagID, PHOTO_TYPES, (IMG_HEIGHT, IMG_WIDTH))
 
     upperTeethO3dMsh = o3d.io.read_triangle_mesh(upperTeethObj)
     upperTeethO3dMsh.paint_uniform_color([0.8, 0.8, 0.8])
@@ -113,6 +116,7 @@ def meshProjection(visualizer, tagID):
     for phType, img in zip(PHOTO_ORDER, photos):
         mshImg = generateProjectedMeshImg(tagID, visualizer, [upperTeethO3dMsh,lowerTeethO3dMsh], phType, ex_rxyz, ex_txyz, fx, u0, v0, rela_R, rela_t)
         _mask = mshImg > 0
+        img = img[...,:3]
         np.putmask(img, _mask, 0.5*mshImg+0.5*img)
         output = img
         output_img_file = os.path.join(OUTPUT_DIR, "{}-{}.png".format(tagID, str(phType)))

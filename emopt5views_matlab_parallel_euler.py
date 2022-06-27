@@ -11,21 +11,13 @@ from scipy.spatial.transform import Rotation as RR
 from collections import Counter
 import itertools
 import skimage
-import enum
 import ray
 import functools
 import h5py
 import utils
+from projection_utils import PHOTO
 
 
-@enum.unique
-class PHOTO(enum.Enum):
-    # Enum values must be 0,1,2,3,4 
-    UPPER = 0
-    LOWER = 1
-    LEFT = 2
-    RIGHT = 3
-    FRONTAL = 4
 
 print = functools.partial(print, flush=True)
 
@@ -140,7 +132,7 @@ class EMOpt5Views(object):
         self.varPlane = 0.5  # param in residual pixel error in maximization loss
         # weight in maximization step for 5 views: [PHOTO.UPPER, PHOTO.LOWER, PHOTO.LEFT, PHOTO.RIGHT, PHOTO.FRONTAL]
 
-        self.weightViews = np.array([3.,3.,1.,1.,1.], dtype=np.float64) 
+        self.weightViews = np.array([2.,2.,1.,1.,1.], dtype=np.float64) # [3,3,1,1,1]
         self.weightAniScale = 1.
         self.weightTeethPose = 1. # param in residual teeth pose error in maximization loss
         self.weightFeatureVec = 1. # param in residual featureVec error in maximization loss
@@ -230,7 +222,7 @@ class EMOpt5Views(object):
 
     def initCameraIntrinsicParams(self, photoType):
         ph = photoType.value
-        focLth = {PHOTO.UPPER:50.0, PHOTO.LOWER:50.0, PHOTO.LEFT:35.0, PHOTO.RIGHT:35.0, PHOTO.FRONTAL:35.0}
+        focLth = {PHOTO.UPPER:50.0, PHOTO.LOWER:50.0, PHOTO.LEFT:50.0, PHOTO.RIGHT:50.0, PHOTO.FRONTAL:50.0} # [50,50,35,35,35]
         self.focLth[ph] = focLth[photoType]
         self.dpix[ph] = 0.06
         self.u0[ph] = self.edgeMask[ph].shape[1]/2. # img.width/2
