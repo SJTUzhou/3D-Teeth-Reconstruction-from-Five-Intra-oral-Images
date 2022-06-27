@@ -474,19 +474,19 @@ if __name__ == "__main__":
         ENGINE = None
         main(phase=2)
     else:
-        # # phase 0 & 1
-        # NUM_CPUS = psutil.cpu_count(logical=False)
-        # ray.init(num_cpus=NUM_CPUS, num_gpus=1) #ray(多线程)初始化
-        # ENGINE = matlab.engine.connect_matlab()
-        # ENGINE.addpath(MATLAB_PATH)
-        # for FOLD_IDX in [5,4,3,2,1]:
-        #     EDGE_MASK_PATH = r"./dataWithPhoto/learning/fold{}/test/pred-{}/".format(FOLD_IDX, VERSION)
-        #     main(phase=0)
-        #     main(phase=1)
-
-        # create demo triangle meshes
-        NUM_CPUS = psutil.cpu_count(logical=False) 
+        # phase 0 & 1
+        NUM_CPUS = psutil.cpu_count(logical=False)
         ray.init(num_cpus=NUM_CPUS, num_gpus=1) #ray(多线程)初始化
-        ray.get([createAlignedPredMeshes.remote(TagID) for TagID in TagIDs])
+        ENGINE = matlab.engine.connect_matlab()
+        ENGINE.addpath(MATLAB_PATH)
+        for FOLD_IDX in [5,4,3,2,1]:
+            EDGE_MASK_PATH = r"./dataWithPhoto/learning/fold{}/test/pred-{}/".format(FOLD_IDX, VERSION)
+            main(phase=0)
+            main(phase=1)
+
+        # # create demo triangle meshes
+        # NUM_CPUS = psutil.cpu_count(logical=False) 
+        # ray.init(num_cpus=NUM_CPUS, num_gpus=1) #ray(多线程)初始化
+        # ray.get([createAlignedPredMeshes.remote(TagID) for TagID in TagIDs])
 
     

@@ -96,11 +96,11 @@ class EMOpt5Views(object):
                                 PHOTO.LEFT: np.array([np.pi, 0.3*np.pi, 0.], dtype=np.float64), # left
                                 PHOTO.RIGHT: np.array([np.pi, -0.3*np.pi, 0.], dtype=np.float64),  # right
                                 PHOTO.FRONTAL: np.array([np.pi, 0., 0.], dtype=np.float64)  }# frontal
-        self.ex_txyz_default = {PHOTO.UPPER: np.array([0., 0., 70.], dtype=np.float64), # upper
-                                PHOTO.LOWER: np.array([0., 0., 70.], dtype=np.float64),  # lower
-                                PHOTO.LEFT: np.array([-5., 0., 70.], dtype=np.float64), # left
-                                PHOTO.RIGHT: np.array([5., 0., 70.], dtype=np.float64),  # right
-                                PHOTO.FRONTAL: np.array([0., -2., 70.], dtype=np.float64) }  # frontal
+        self.ex_txyz_default = {PHOTO.UPPER: np.array([0., 0., 240.], dtype=np.float64), # upper # 70
+                                PHOTO.LOWER: np.array([0., 0., 240.], dtype=np.float64),  # lower # 70
+                                PHOTO.LEFT: np.array([-5., 0., 240.], dtype=np.float64), # left # [-5,0,70]
+                                PHOTO.RIGHT: np.array([5., 0., 240.], dtype=np.float64),  # right # [5,0,70]
+                                PHOTO.FRONTAL: np.array([0., -2., 240.], dtype=np.float64) }  # frontal # [0,-2,70]
         self.ex_rxyz = np.empty((5,3), dtype=np.float64) # shape=(5,3) # init rot angles around x-y-z axis based on photoType
         self.ex_txyz = np.empty((5,3), dtype=np.float64) # shape=(5,3) # init trans vector
         # init intrinsic param of camera
@@ -222,9 +222,9 @@ class EMOpt5Views(object):
 
     def initCameraIntrinsicParams(self, photoType):
         ph = photoType.value
-        focLth = {PHOTO.UPPER:50.0, PHOTO.LOWER:50.0, PHOTO.LEFT:50.0, PHOTO.RIGHT:50.0, PHOTO.FRONTAL:50.0} # [50,50,35,35,35]
+        focLth = {PHOTO.UPPER:100.0, PHOTO.LOWER:100.0, PHOTO.LEFT:100.0, PHOTO.RIGHT:100.0, PHOTO.FRONTAL:100.0} # [50,50,35,35,35]
         self.focLth[ph] = focLth[photoType]
-        self.dpix[ph] = 0.06
+        self.dpix[ph] = 0.04
         self.u0[ph] = self.edgeMask[ph].shape[1]/2. # img.width/2
         self.v0[ph] = self.edgeMask[ph].shape[0]/2. # img.height/2
 
@@ -311,8 +311,8 @@ class EMOpt5Views(object):
         ExtrParamSearchSpace = {PHOTO.UPPER:{"r.x": np.pi*np.array([0.6, 0.65, 0.7, 0.75, 0.8],np.float64)},
                                 PHOTO.LOWER:{"r.x": np.pi*np.array([-0.6, -0.65, -0.7, -0.75, -0.8],np.float64)},
                                 PHOTO.LEFT:{"r.y": np.pi*np.array([0.1, 0.15, 0.2, 0.25, 0.3],np.float64)},
-                                PHOTO.RIGHT:{"r.y": np.pi*np.array([-0.1, -0.15, -0.2, -0.25, -0.3],np.float64)},
-                                PHOTO.FRONTAL:{"t.z": np.array([65,70,75],np.float64)} }
+                                PHOTO.RIGHT:{"r.y": np.pi*np.array([-0.1, -0.15, -0.2, -0.25, -0.3],np.float64)},}
+                                # PHOTO.FRONTAL:{"t.z": np.array([65,70,75],np.float64)} }
         self.initRelativeToothRowPose()
         for phType, paramDict in ExtrParamSearchSpace.items():
             ph = phType.value
