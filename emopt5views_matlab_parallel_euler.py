@@ -49,8 +49,8 @@ class EMOpt5Views(object):
         self.P_true = [np.argwhere(v>0)[:,::-1] for v in self.edgeMask]
         self.P_true_normals = [self.initEdgeMaskNormals(v) for v in self.P_true]
         self.M = [len(v) for v in self.P_true] # 真实Mask中边缘像素点的数量
-        self.flag_95_percentile = [np.ones((m,),np.bool_) for m in self.M]
-        self.P_true_95_percentile = [p_true[flag] for flag,p_true in zip(self.flag_95_percentile,self.P_true)]
+        self.flag_99_percentile = [np.ones((m,),np.bool_) for m in self.M]
+        self.P_true_99_percentile = [p_true[flag] for flag,p_true in zip(self.flag_99_percentile,self.P_true)]
         
         # 分为上下牙列
         self.Mask = Mask
@@ -96,11 +96,11 @@ class EMOpt5Views(object):
                                 PHOTO.LEFT: np.array([np.pi, 0.3*np.pi, 0.], dtype=np.float64), # left
                                 PHOTO.RIGHT: np.array([np.pi, -0.3*np.pi, 0.], dtype=np.float64),  # right
                                 PHOTO.FRONTAL: np.array([np.pi, 0., 0.], dtype=np.float64)  }# frontal
-        self.ex_txyz_default = {PHOTO.UPPER: np.array([0., 0., 240.], dtype=np.float64), # upper # 70
-                                PHOTO.LOWER: np.array([0., 0., 240.], dtype=np.float64),  # lower # 70
-                                PHOTO.LEFT: np.array([-5., 0., 240.], dtype=np.float64), # left # [-5,0,70]
-                                PHOTO.RIGHT: np.array([5., 0., 240.], dtype=np.float64),  # right # [5,0,70]
-                                PHOTO.FRONTAL: np.array([0., -2., 240.], dtype=np.float64) }  # frontal # [0,-2,70]
+        self.ex_txyz_default = {PHOTO.UPPER: np.array([0., 0., 70.], dtype=np.float64), # upper # 70
+                                PHOTO.LOWER: np.array([0., 0., 70.], dtype=np.float64),  # lower # 70
+                                PHOTO.LEFT: np.array([-5., 0., 70.], dtype=np.float64), # left # [-5,0,70]
+                                PHOTO.RIGHT: np.array([5., 0., 70.], dtype=np.float64),  # right # [5,0,70]
+                                PHOTO.FRONTAL: np.array([0., -2., 70.], dtype=np.float64) }  # frontal # [0,-2,70]
         self.ex_rxyz = np.empty((5,3), dtype=np.float64) # shape=(5,3) # init rot angles around x-y-z axis based on photoType
         self.ex_txyz = np.empty((5,3), dtype=np.float64) # shape=(5,3) # init trans vector
         # init intrinsic param of camera
@@ -132,7 +132,7 @@ class EMOpt5Views(object):
         self.varPlane = 0.5  # param in residual pixel error in maximization loss
         # weight in maximization step for 5 views: [PHOTO.UPPER, PHOTO.LOWER, PHOTO.LEFT, PHOTO.RIGHT, PHOTO.FRONTAL]
 
-        self.weightViews = np.array([1.,1.,1.,1.,1.], dtype=np.float64) # [3,3,1,1,1]
+        self.weightViews = np.array([2.,2.,1.,1.,1.], dtype=np.float64) # [3,3,1,1,1]
         self.weightAniScale = 1.
         self.weightTeethPose = 1. # param in residual teeth pose error in maximization loss
         self.weightFeatureVec = 1. # param in residual featureVec error in maximization loss
@@ -223,8 +223,9 @@ class EMOpt5Views(object):
     def initCameraIntrinsicParams(self, photoType):
         ph = photoType.value
         focLth = {PHOTO.UPPER:100.0, PHOTO.LOWER:100.0, PHOTO.LEFT:100.0, PHOTO.RIGHT:100.0, PHOTO.FRONTAL:100.0} # [50,50,35,35,35]
+        dpix = {PHOTO.UPPER:0.1, PHOTO.LOWER:0.1, PHOTO.LEFT:0.15, PHOTO.RIGHT:0.15, PHOTO.FRONTAL:0.15} # 0.06
         self.focLth[ph] = focLth[photoType]
-        self.dpix[ph] = 0.04 # 0.06
+        self.dpix[ph] = dpix[photoType] 
         self.u0[ph] = self.edgeMask[ph].shape[1]/2. # img.width/2
         self.v0[ph] = self.edgeMask[ph].shape[0]/2. # img.height/2
 
@@ -269,7 +270,7 @@ class EMOpt5Views(object):
         X = P_true.astype(np.double)
         Y = P_pred.astype(np.double)
         # 二维相似变换配准
-        reg = cycpd.rigid_registration(**{'X': X, 'Y': Y, 'max_iterations':100,'tolerance':1.0,'w':0.01,'verbose':False,'print_reg_params':False})
+        reg = cycpd.rigid_registration(**{'X': X, 'Y': Y, 'max_iterations':100,'tolerance':1.0,'w':1e-3,'verbose':False,'print_reg_params':False})
         TY,(s,r,t) = reg.register()
         return TY
 
@@ -333,7 +334,7 @@ class EMOpt5Views(object):
                     self.assignValue2ExtrParamByName(phType, paramName, paramValue)
                     self.updateEdgePrediction(phType) # 更新 X_Mu_pred
                     self.updateCameraParams(TY_list[idx], self.X_Mu_pred[ph], phType, self.rela_txyz, self.rela_R) # update extrinsic and intrinsic camera params
-                    losses.append(self.expectation_step(phType, verbose=True)) # use expectation loss as evaluation metric for extrinsic params
+                    losses.append(self.expectation_step(phType, verbose=True, use_percentile=False)) # use expectation loss as evaluation metric for extrinsic params
                 
                 idx_selected = np.argmin(losses)
                 bestParamValue = paramSearchSpace[idx_selected] # best guess from expectation loss
@@ -396,7 +397,7 @@ class EMOpt5Views(object):
                     self.updateEdgePrediction(phType)
                     i = idx * num_photo_relevant + jdx
                     self.updateCameraParams(TY_list[i], self.X_Mu_pred[ph], phType, rela_txyz_list[i]) # update extrinsic and intrinsic camera params
-                    loss = loss + self.expectation_step(phType, verbose=True) # use expectation loss as evaluation metric
+                    loss = loss + self.expectation_step(phType, verbose=True, use_percentile=False) # use expectation loss as evaluation metric
                 losses.append(loss)
             
             idx_selected = np.argmin(losses)
@@ -434,7 +435,7 @@ class EMOpt5Views(object):
                 self.assignValue2RelaPoseParamByName(paramName, paramValue) # 初始化牙列相对位姿参数
                 self.updateEdgePrediction(phType) # 更新 X_Mu_pred
                 self.updateCameraParams(TY_list[idx], self.X_Mu_pred[ph], phType, rela_txyz_list[idx]) # update extrinsic and intrinsic camera params
-                losses.append(self.expectation_step(phType, verbose=True)) # use expectation loss as evaluation metric
+                losses.append(self.expectation_step(phType, verbose=True, use_percentile=False)) # use expectation loss as evaluation metric
             
             idx_selected = np.argmin(losses)
             bestParamValue = SearchSpace[idx_selected] # best guess from expectation loss
@@ -654,28 +655,31 @@ class EMOpt5Views(object):
     ######### Update & Expectation Step #######
     ###########################################
 
-    def __expectation(self, photoType, verbose):
+    def __expectation(self, photoType, verbose, use_percentile=True):
         ph = photoType.value
         point_loss_mat = distance_matrix(self.P_true[ph], self.P_pred[ph], p=2, threshold=int(1e8))**2
         normal_loss_mat = - (self.P_true_normals[ph] @ self.P_pred_normals[ph].T)**2 / self.varAngle
         loss_mat = point_loss_mat * np.exp(normal_loss_mat) # weighted loss matrix
         _corre_pred_idx = np.argmin(loss_mat, axis=1)
         losses = loss_mat[np.arange(self.M[ph]), _corre_pred_idx]
-        # 95-percentile
-        self.flag_95_percentile[ph] = losses < np.percentile(losses, 95.0)
-        self.corre_pred_idx[ph] = _corre_pred_idx[self.flag_95_percentile[ph]]
-        self.P_true_95_percentile[ph] = self.P_true[ph][self.flag_95_percentile[ph]]
+        if use_percentile == True:
+            # 99-percentile
+            self.flag_99_percentile[ph] = losses < np.percentile(losses, 99.0)
+            self.corre_pred_idx[ph] = _corre_pred_idx[self.flag_99_percentile[ph]]
+            self.P_true_99_percentile[ph] = self.P_true[ph][self.flag_99_percentile[ph]]
+            self.loss_expectation_step[ph] = np.sum(losses[self.flag_99_percentile[ph]])
+        else:
+            self.loss_expectation_step[ph] = np.sum(losses)
 
-        self.loss_expectation_step[ph] = np.sum(losses[self.flag_95_percentile[ph]])
         if verbose==True:
             print("{} - unique pred points: {} - E-step loss: {:.2f}".format(str(photoType), len(np.unique(self.corre_pred_idx[ph])), self.loss_expectation_step[ph]))
     
-    def expectation_step(self, photoType, verbose=True):
+    def expectation_step(self, photoType, verbose=True, use_percentile=True):
         # 根据新的edgePredcition计算对应点对关系
         ph = photoType.value
         self.updateAlignedPointCloudInWorldCoord(tIdx=self.visIdx[ph])
         self.updateEdgePrediction(photoType)
-        self.__expectation(photoType, verbose)
+        self.__expectation(photoType, verbose, use_percentile)
         return self.loss_expectation_step[ph]
 
     def expectation_step_5Views(self, verbose=True):
@@ -694,7 +698,7 @@ class EMOpt5Views(object):
                         "np_u0":self.u0, "np_v0":self.v0, "np_rela_rxyz":self.rela_rxyz, "np_rela_txyz":self.rela_txyz, "np_rowScaleXZ":self.rowScaleXZ, 
                         "np_scales":self.scales, "np_rotAngleXYZs":self.rotAngleXYZs, "np_transVecXYZs":self.transVecXYZs,
                         "np_X_Mu":self.X_Mu, "np_X_Mu_pred":self.X_Mu_pred, "np_X_Mu_pred_normals":self.X_Mu_pred_normals,
-                        "np_visIdx":self.visIdx, "np_corre_pred_idx":self.corre_pred_idx, "np_P_true":self.P_true_95_percentile, "np_X_ref":X_Ref})
+                        "np_visIdx":self.visIdx, "np_corre_pred_idx":self.corre_pred_idx, "np_P_true":self.P_true_99_percentile, "np_X_ref":X_Ref})
     
     def save_expectation_step_result(self, filename):
         # 将EStep的结果暂存到.mat文件中方便matlab调用
@@ -703,7 +707,7 @@ class EMOpt5Views(object):
                         "np_u0": self.u0, "np_v0": self.v0, "np_rela_rxyz": self.rela_rxyz, "np_rela_txyz": self.rela_txyz, "np_rowScaleXZ": self.rowScaleXZ, 
                         "np_scales": self.scales, "np_rotAngleXYZs": self.rotAngleXYZs, "np_transVecXYZs": self.transVecXYZs,
                         "np_X_Mu": self.X_Mu, "np_X_Mu_pred": self.X_Mu_pred, "np_X_Mu_pred_normals": self.X_Mu_pred_normals,
-                        "np_visIdx": self.visIdx, "np_corre_pred_idx": self.corre_pred_idx, "np_P_true": self.P_true_95_percentile,})
+                        "np_visIdx": self.visIdx, "np_corre_pred_idx": self.corre_pred_idx, "np_P_true": self.P_true_99_percentile,})
 
     def load_expectation_step_result(self, filename, stage):
         # 读取matlab运行后得到的MStep的结果，并更新相关参数
@@ -848,7 +852,7 @@ class EMOpt5Views(object):
         P_corre_pred = self.updatePointPosInImageCoord(X_cam_corre_pred, intrProjMat)
         P_corre_pred_normals = self.updatePointNormalsInImageCoord(X_cam_corre_pred_normals)
         
-        errorVecUV = self.P_true_95_percentile[ph] - P_corre_pred # ci - \hat{ci}
+        errorVecUV = self.P_true_99_percentile[ph] - P_corre_pred # ci - \hat{ci}
         resPointError = np.sum(np.linalg.norm(errorVecUV, axis=1)**2) / self.varPoint
         resPlaneError = np.sum(np.sum(errorVecUV*P_corre_pred_normals, axis=1)**2) / self.varPlane
         return (resPointError + resPlaneError) / self.M[ph]
