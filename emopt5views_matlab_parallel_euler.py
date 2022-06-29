@@ -132,7 +132,7 @@ class EMOpt5Views(object):
         self.varPlane = 0.5  # param in residual pixel error in maximization loss
         # weight in maximization step for 5 views: [PHOTO.UPPER, PHOTO.LOWER, PHOTO.LEFT, PHOTO.RIGHT, PHOTO.FRONTAL]
 
-        self.weightViews = np.array([2.,2.,1.,1.,1.], dtype=np.float64) # [3,3,1,1,1]
+        self.weightViews = np.array([1.,1.,1.,1.,1.], dtype=np.float64) # [3,3,1,1,1]
         self.weightAniScale = 1.
         self.weightTeethPose = 1. # param in residual teeth pose error in maximization loss
         self.weightFeatureVec = 1. # param in residual featureVec error in maximization loss

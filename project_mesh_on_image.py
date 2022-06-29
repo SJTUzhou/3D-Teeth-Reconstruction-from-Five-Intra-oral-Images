@@ -18,8 +18,10 @@ PHOTO_DIR = r"./dataWithPhoto/normal_resized/"
 EDGE_DIR = r"./dataWithPhoto/normal_mask/"
 IMG_WIDTH = 800
 IMG_HEIGHT = 600
-OUTPUT_DIR = r"./dataWithPhoto/photoWithMeshProjected/"
-# OUTPUT_DIR = r"./dataWithPhoto/photoWithMeshProjected/Edge/"
+WINDOW_WIDTH = 1600
+WINDOW_HEIGHT = 1200
+# OUTPUT_DIR = r"./dataWithPhoto/photoWithMeshProjected/"
+OUTPUT_DIR = r"./dataWithPhoto/photoWithMeshProjected/Edge/"
 NAME_IDX_MAP_CSV = r"./dataWithPhoto/nameIndexMapping.csv"
 NAME_IDX_MAP = pd.read_csv(NAME_IDX_MAP_CSV)
 PHOTO_ORDER = [PHOTO.UPPER, PHOTO.LOWER, PHOTO.LEFT, PHOTO.RIGHT, PHOTO.FRONTAL]
@@ -77,7 +79,7 @@ def generateProjectedMeshImg(tagID, visualizer, ulTeethMshes, phType, ex_rxyz, e
     visualizer.add_geometry(msh)
     viewControl = visualizer.get_view_control()
     pinholeParams = o3d.camera.PinholeCameraParameters()
-    pinholeParams.intrinsic = o3d.camera.PinholeCameraIntrinsic(IMG_WIDTH, IMG_HEIGHT, fx[ph], fx[ph], u0[ph], v0[ph])  # 399.5, 299.5)
+    pinholeParams.intrinsic = o3d.camera.PinholeCameraIntrinsic(WINDOW_WIDTH, WINDOW_HEIGHT, fx[ph], fx[ph], u0[ph], v0[ph])  # 399.5, 299.5)
     pinholeParams.extrinsic = np.identity(4)
     viewControl.convert_from_pinhole_camera_parameters(pinholeParams, allow_arbitrary=True)
     # camera_parameters = viewControl.convert_to_pinhole_camera_parameters()
@@ -86,12 +88,14 @@ def generateProjectedMeshImg(tagID, visualizer, ulTeethMshes, phType, ex_rxyz, e
     visualizer.poll_events()
     visualizer.update_renderer()
 
-    _u0 = IMG_WIDTH / 2 - 0.5
-    _v0 = IMG_HEIGHT / 2 - 0.5
+    _u0 = WINDOW_WIDTH / 2 - 0.5
+    _v0 = WINDOW_HEIGHT / 2 - 0.5
     img = np.asarray(visualizer.capture_screen_float_buffer(do_render=True))
     tForm = skimage.transform.EuclideanTransform(rotation=None, translation=np.array([ _u0-u0[ph], _v0-v0[ph]]), dimensionality=2)
     shiftedImg = skimage.transform.warp(img, tForm)
-    return shiftedImg
+    croppedImg = shiftedImg[:IMG_HEIGHT, :IMG_WIDTH]
+    # print(croppedImg.shape)
+    return croppedImg
 
 
 
@@ -102,8 +106,8 @@ def meshProjection(visualizer, tagID):
     ex_rxyz, ex_txyz, focLth, dpix, u0, v0, rela_R, rela_t = proj.readCameraParamsFromH5(h5File=demoH5File, patientId=tagID)
     fx = focLth / dpix
 
-    photos = proj.getPhotos(PHOTO_DIR, NAME_IDX_MAP, tagID, PHOTO_TYPES, (IMG_HEIGHT, IMG_WIDTH))
-    # photos = proj.getPhotos(EDGE_DIR, NAME_IDX_MAP, tagID, PHOTO_TYPES, (IMG_HEIGHT, IMG_WIDTH))
+    # photos = proj.getPhotos(PHOTO_DIR, NAME_IDX_MAP, tagID, PHOTO_TYPES, (IMG_HEIGHT, IMG_WIDTH))
+    photos = proj.getPhotos(EDGE_DIR, NAME_IDX_MAP, tagID, PHOTO_TYPES, (IMG_HEIGHT, IMG_WIDTH))
 
     upperTeethO3dMsh = o3d.io.read_triangle_mesh(upperTeethObj)
     upperTeethO3dMsh.paint_uniform_color([0.8, 0.8, 0.8])
@@ -117,7 +121,7 @@ def meshProjection(visualizer, tagID):
         mshImg = generateProjectedMeshImg(tagID, visualizer, [upperTeethO3dMsh,lowerTeethO3dMsh], phType, ex_rxyz, ex_txyz, fx, u0, v0, rela_R, rela_t)
         _mask = mshImg > 0
         img = img[...,:3]
-        np.putmask(img, _mask, 0.5*mshImg+0.5*img)
+        np.putmask(img, _mask, np.clip(0.4*mshImg+0.6*img, 0., 1.))
         output = img
         output_img_file = os.path.join(OUTPUT_DIR, "{}-{}.png".format(tagID, str(phType)))
         print(output_img_file)
@@ -127,12 +131,13 @@ def meshProjection(visualizer, tagID):
 
 
 def main():
+    TagIDRange = range(0, 95)
     vis = o3d.visualization.Visualizer()
-    vis.create_window(window_name="Image Screen Shot", visible=True, width=IMG_WIDTH, height=IMG_HEIGHT)
+    vis.create_window(window_name="Image Screen Shot", visible=True, width=WINDOW_WIDTH, height=WINDOW_HEIGHT)
     opt = vis.get_render_option()
     opt.background_color = np.asarray([0, 0, 0])
     # vis.run() # block the visualizer
-    for tagID in range(0,95):
+    for tagID in TagIDRange:
         meshProjection(vis, tagID)
     vis.destroy_window()
 
