@@ -481,7 +481,7 @@ if __name__ == "__main__":
         ENGINE.addpath(MATLAB_PATH)
         for FOLD_IDX in [5,4,3,2,1]:
             EDGE_MASK_PATH = r"./dataWithPhoto/learning/fold{}/test/pred-{}/".format(FOLD_IDX, VERSION)
-            # main(phase=0)
+            main(phase=0)
             main(phase=1)
 
         # # create demo triangle meshes

@@ -35,10 +35,15 @@ MASK_RIGHT = np.array([ True,  True,  True,  True,  True,  True,  False,  # 右�
                   True,  False,  False,  False,  False,  False,  False, 
                   True,  True,  True,  True,  True,  True,  False])
 
-MASK_FRONTAL = np.array([ True,  True,  True,  True,  False,  False,  False,  # 正视图
-                  True,  True,  True,  True,  False,  False,  False,  
-                  True,  True,  True,  True,  False,  False,  False, 
-                  True,  True,  True,  True,  False,  False,  False])
+# MASK_FRONTAL = np.array([ True,  True,  True,  True,  False,  False,  False,  # 正视图
+#                   True,  True,  True,  True,  False,  False,  False,  
+#                   True,  True,  True,  True,  False,  False,  False, 
+#                   True,  True,  True,  True,  False,  False,  False])
+
+MASK_FRONTAL = np.array([ True,  True,  True,  True,  True,  True,  False,  # 正视图
+                  True,  True,  True,  True,  True,  True,  False,  
+                  True,  True,  True,  True,  True,  True,  False, 
+                  True,  True,  True,  True,  True,  True,  False])
 
 
 @enum.unique

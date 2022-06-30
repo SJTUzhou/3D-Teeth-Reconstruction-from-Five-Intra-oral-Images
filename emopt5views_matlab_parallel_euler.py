@@ -98,9 +98,9 @@ class EMOpt5Views(object):
                                 PHOTO.FRONTAL: np.array([np.pi, 0., 0.], dtype=np.float64)  }# frontal
         self.ex_txyz_default = {PHOTO.UPPER: np.array([0., 0., 70.], dtype=np.float64), # upper # 70
                                 PHOTO.LOWER: np.array([0., 0., 70.], dtype=np.float64),  # lower # 70
-                                PHOTO.LEFT: np.array([-5., 0., 70.], dtype=np.float64), # left # [-5,0,70]
-                                PHOTO.RIGHT: np.array([5., 0., 70.], dtype=np.float64),  # right # [5,0,70]
-                                PHOTO.FRONTAL: np.array([0., -2., 70.], dtype=np.float64) }  # frontal # [0,-2,70]
+                                PHOTO.LEFT: np.array([-5., 0., 120.], dtype=np.float64), # left # [-5,0,70]
+                                PHOTO.RIGHT: np.array([5., 0., 120.], dtype=np.float64),  # right # [5,0,70]
+                                PHOTO.FRONTAL: np.array([0., -2., 120.], dtype=np.float64) }  # frontal # [0,-2,70]
         self.ex_rxyz = np.empty((5,3), dtype=np.float64) # shape=(5,3) # init rot angles around x-y-z axis based on photoType
         self.ex_txyz = np.empty((5,3), dtype=np.float64) # shape=(5,3) # init trans vector
         # init intrinsic param of camera
@@ -132,7 +132,7 @@ class EMOpt5Views(object):
         self.varPlane = 0.5  # param in residual pixel error in maximization loss
         # weight in maximization step for 5 views: [PHOTO.UPPER, PHOTO.LOWER, PHOTO.LEFT, PHOTO.RIGHT, PHOTO.FRONTAL]
 
-        self.weightViews = np.array([1.,1.,1.,1.,1.], dtype=np.float64) # [3,3,1,1,1]
+        self.weightViews = np.array([2.,2.,1.,1.,1.], dtype=np.float64) # [3,3,1,1,1]
         self.weightAniScale = 1.
         self.weightTeethPose = 1. # param in residual teeth pose error in maximization loss
         self.weightFeatureVec = 1. # param in residual featureVec error in maximization loss
@@ -223,7 +223,7 @@ class EMOpt5Views(object):
     def initCameraIntrinsicParams(self, photoType):
         ph = photoType.value
         focLth = {PHOTO.UPPER:100.0, PHOTO.LOWER:100.0, PHOTO.LEFT:100.0, PHOTO.RIGHT:100.0, PHOTO.FRONTAL:100.0} # [50,50,35,35,35]
-        dpix = {PHOTO.UPPER:0.1, PHOTO.LOWER:0.1, PHOTO.LEFT:0.15, PHOTO.RIGHT:0.15, PHOTO.FRONTAL:0.15} # 0.06
+        dpix = {PHOTO.UPPER:0.1, PHOTO.LOWER:0.1, PHOTO.LEFT:0.06, PHOTO.RIGHT:0.06, PHOTO.FRONTAL:0.06} # 0.06
         self.focLth[ph] = focLth[photoType]
         self.dpix[ph] = dpix[photoType] 
         self.u0[ph] = self.edgeMask[ph].shape[1]/2. # img.width/2

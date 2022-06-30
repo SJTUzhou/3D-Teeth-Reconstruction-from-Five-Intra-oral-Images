@@ -146,7 +146,7 @@ classdef EmOptMStep < handle
             obj.weightTeethPose = 1;
             obj.invCovMatOfScale = double(np_invCovMatOfScale); % symmetrical
             obj.invCovMatOfPose = permute(double(np_invCovMatOfPose), [3,2,1]); %transpose
-            obj.weightPhotos = [1, 1, 1, 1, 1];
+            obj.weightPhotos = [2, 2, 1, 1, 1];
             obj.photoTypes = [PHOTO.UPPER, PHOTO.LOWER, PHOTO.LEFT, PHOTO.RIGHT, PHOTO.FRONTAL];
 
 
