@@ -312,8 +312,8 @@ class EMOpt5Views(object):
         ExtrParamSearchSpace = {PHOTO.UPPER:{"r.x": np.pi*np.array([0.6, 0.65, 0.7, 0.75, 0.8],np.float64)},
                                 PHOTO.LOWER:{"r.x": np.pi*np.array([-0.6, -0.65, -0.7, -0.75, -0.8],np.float64)},
                                 PHOTO.LEFT:{"r.y": np.pi*np.array([0.1, 0.15, 0.2, 0.25, 0.3],np.float64)},
-                                PHOTO.RIGHT:{"r.y": np.pi*np.array([-0.1, -0.15, -0.2, -0.25, -0.3],np.float64)},
-                                PHOTO.FRONTAL:{"r.x": np.pi*np.array([0.98, 1., 1.02],np.float64)} }
+                                PHOTO.RIGHT:{"r.y": np.pi*np.array([-0.1, -0.15, -0.2, -0.25, -0.3],np.float64)},}
+                                # PHOTO.FRONTAL:{"t.z": np.array([65,70,75],np.float64)} }
         self.initRelativeToothRowPose()
         for phType, paramDict in ExtrParamSearchSpace.items():
             ph = phType.value
