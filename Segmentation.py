@@ -10,12 +10,14 @@ from tensorflow.keras.callbacks import ModelCheckpoint
 import functools
 
  
-VERSION = "v12"
+VERSION = "v21"
 IMG_SHAPE = (512, 512, 3)
 LBL_SHAPE = IMG_SHAPE[:2]
 LOW_MEMORY = True
 print = functools.partial(print, flush=True)
 EXPANSION_RATE = 3
+IMAGE_SUBDIR = "image"
+LABEL_SUBDIR = "label-revised"
 
 def dice_loss(y_true, y_pred, smooth=1.):
     intersection = tf.reduce_sum(y_true*y_pred)
@@ -96,18 +98,18 @@ def Dice_SSIM_loss(y_true, y_pred, SSMI_Weight=SSMI_Weight):
 
 
 def read_data(parent_dir):
-    file_list = glob.glob(os.path.join(parent_dir, 'image', '*.png'))
+    file_list = glob.glob(os.path.join(parent_dir, IMAGE_SUBDIR, '*.png'))
     image_list = []
     label_list = []
     for file_path in file_list:
-        label_path = os.path.join(parent_dir, 'label', os.path.basename(file_path))
+        label_path = os.path.join(parent_dir, LABEL_SUBDIR, os.path.basename(file_path))
         image_list.append(skimage.io.imread(file_path))
         label_list.append(skimage.io.imread(label_path, as_gray=True))
     return image_list, label_list
 
 def get_data_filenames(parent_dir):
-    image_filename_list = glob.glob(os.path.join(parent_dir, 'image', '*.png'))
-    label_filename_list = [os.path.join(parent_dir, 'label', os.path.basename(image_filename)) \
+    image_filename_list = glob.glob(os.path.join(parent_dir, IMAGE_SUBDIR, '*.png'))
+    label_filename_list = [os.path.join(parent_dir, LABEL_SUBDIR, os.path.basename(image_filename)) \
                           for image_filename in image_filename_list]
     return image_filename_list, label_filename_list
 
@@ -418,10 +420,12 @@ def train():
     # model = ASPP_UNet2018(IMG_SHAPE, filters=[16,32,64,128,256]) # VERSION: v10(L_Dice+0.01*L_HD)
 
     # model = ASPP_UNet2018(IMG_SHAPE, filters=[16,32,64,128,256]) # VERSION: v11(L_Dice) EXPANSION_RATE=3
-    model = ASPP_UNet2018(IMG_SHAPE, filters=[16,32,64,128,256]) # VERSION: v12(BCE+SSIM) EXPANSION_RATE=3
+    # model = ASPP_UNet2018(IMG_SHAPE, filters=[16,32,64,128,256]) # VERSION: v12(BCE+SSIM) EXPANSION_RATE=3
     # model = ASPP_Res_UNet(IMG_SHAPE, filters=[16,32,64,128,256]) # VERSION: v13(L_Dice) EXPANSION_RATE=3
     # model = ASPP_Res_UNet(IMG_SHAPE, filters=[16,32,64,128,256]) # VERSION: v14(L_Dice+SSIM) EXPANSION_RATE=3
     # model = ASPP_Res_UNet(IMG_SHAPE, filters=[16,32,64,128,256]) # VERSION: v15(BCE+SSIM) EXPANSION_RATE=3
+
+    model = ASPP_UNet2018(IMG_SHAPE, filters=[16,32,64,128,256]) # VERSION: v21(L_Dice+SSIM) EXPANSION_RATE=3 label-revised
     
     print(model.summary())
 
@@ -437,12 +441,12 @@ def train():
 
     # train
     # weight_ckpt = os.path.join(ROOT_DIR, r'weights-dice-50-{}.h5'.format(VERSION))
-    weight_ckpt = os.path.join(ROOT_DIR, r'weights-bce-ssim-50-{}.h5'.format(VERSION))
-    # weight_ckpt = os.path.join(ROOT_DIR, r'weights-dice-ssim-50-{}.h5'.format(VERSION))
+    # weight_ckpt = os.path.join(ROOT_DIR, r'weights-bce-ssim-50-{}.h5'.format(VERSION))
+    weight_ckpt = os.path.join(ROOT_DIR, r'weights-dice-ssim-50-{}.h5'.format(VERSION))
     
     # model.compile(optimizer=keras.optimizers.Adam(learning_rate=.0005), loss=dice_loss)
-    model.compile(optimizer=keras.optimizers.Adam(learning_rate=.0005), loss=BCE_SSIM_loss)
-    # model.compile(optimizer=keras.optimizers.Adam(learning_rate=.0005), loss=Dice_SSIM_loss)
+    # model.compile(optimizer=keras.optimizers.Adam(learning_rate=.0005), loss=BCE_SSIM_loss)
+    model.compile(optimizer=keras.optimizers.Adam(learning_rate=.0005), loss=Dice_SSIM_loss)
     
 
     print(weight_ckpt)
@@ -457,7 +461,7 @@ def train():
 
 
 if __name__ == "__main__":
-    for FOLD_IDX in [4,3]:#[5,4,3,2,1]:
+    for FOLD_IDX in [5,4,3,2,1]:
         ROOT_DIR = r"./dataWithPhoto/learning/fold{}/".format(FOLD_IDX)
         TRAIN_PATH = os.path.join(ROOT_DIR, r"train/")
         VALID_PATH = os.path.join(ROOT_DIR, r"test/")
