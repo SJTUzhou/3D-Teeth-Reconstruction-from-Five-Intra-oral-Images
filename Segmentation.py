@@ -10,7 +10,7 @@ from tensorflow.keras.callbacks import ModelCheckpoint
 import functools
 
  
-VERSION = "v21"
+VERSION = "v20"
 IMG_SHAPE = (512, 512, 3)
 LBL_SHAPE = IMG_SHAPE[:2]
 LOW_MEMORY = True
@@ -425,7 +425,8 @@ def train():
     # model = ASPP_Res_UNet(IMG_SHAPE, filters=[16,32,64,128,256]) # VERSION: v14(L_Dice+SSIM) EXPANSION_RATE=3
     # model = ASPP_Res_UNet(IMG_SHAPE, filters=[16,32,64,128,256]) # VERSION: v15(BCE+SSIM) EXPANSION_RATE=3
 
-    model = ASPP_UNet2018(IMG_SHAPE, filters=[16,32,64,128,256]) # VERSION: v21(L_Dice+SSIM) EXPANSION_RATE=3 label-revised
+    model = ASPP_UNet2018(IMG_SHAPE, filters=[16,32,64,128,256]) # VERSION: v20(BCE+SSIM) EXPANSION_RATE=3 label-revised
+    # model = ASPP_UNet2018(IMG_SHAPE, filters=[16,32,64,128,256]) # VERSION: v21(L_Dice+SSIM) EXPANSION_RATE=3 label-revised
     
     print(model.summary())
 
@@ -441,12 +442,13 @@ def train():
 
     # train
     # weight_ckpt = os.path.join(ROOT_DIR, r'weights-dice-50-{}.h5'.format(VERSION))
-    # weight_ckpt = os.path.join(ROOT_DIR, r'weights-bce-ssim-50-{}.h5'.format(VERSION))
-    weight_ckpt = os.path.join(ROOT_DIR, r'weights-dice-ssim-50-{}.h5'.format(VERSION))
+    weight_ckpt = os.path.join(ROOT_DIR, r'weights-bce-ssim-50-{}.h5'.format(VERSION))
+    # weight_ckpt = os.path.join(ROOT_DIR, r'weights-dice-ssim-50-{}.h5'.format(VERSION))
     
+
     # model.compile(optimizer=keras.optimizers.Adam(learning_rate=.0005), loss=dice_loss)
-    # model.compile(optimizer=keras.optimizers.Adam(learning_rate=.0005), loss=BCE_SSIM_loss)
-    model.compile(optimizer=keras.optimizers.Adam(learning_rate=.0005), loss=Dice_SSIM_loss)
+    model.compile(optimizer=keras.optimizers.Adam(learning_rate=.0005), loss=BCE_SSIM_loss)
+    # model.compile(optimizer=keras.optimizers.Adam(learning_rate=.0005), loss=Dice_SSIM_loss)
     
 
     print(weight_ckpt)
@@ -461,7 +463,7 @@ def train():
 
 
 if __name__ == "__main__":
-    for FOLD_IDX in [5,4,3,2,1]:
+    for FOLD_IDX in [2,1]:#[5,4,3,2,1]:
         ROOT_DIR = r"./dataWithPhoto/learning/fold{}/".format(FOLD_IDX)
         TRAIN_PATH = os.path.join(ROOT_DIR, r"train/")
         VALID_PATH = os.path.join(ROOT_DIR, r"test/")

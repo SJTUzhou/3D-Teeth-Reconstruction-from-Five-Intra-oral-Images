@@ -110,7 +110,7 @@ def meshProjection(visualizer, tagID):
     photos = proj.getPhotos(EDGE_DIR, NAME_IDX_MAP, tagID, PHOTO_TYPES, (IMG_HEIGHT, IMG_WIDTH))
 
     upperTeethO3dMsh = o3d.io.read_triangle_mesh(upperTeethObj)
-    upperTeethO3dMsh.paint_uniform_color([0.8, 0.8, 0.8])
+    upperTeethO3dMsh.paint_uniform_color([0.75, 0.75, 0.75])
     upperTeethO3dMsh.compute_vertex_normals()
 
     lowerTeethO3dMsh = o3d.io.read_triangle_mesh(lowerTeethObj)

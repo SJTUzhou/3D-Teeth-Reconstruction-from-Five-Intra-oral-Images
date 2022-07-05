@@ -47,7 +47,7 @@ MASK_NPY = os.path.join(SRC_PARAM_DIR, "X_mask.npy")
 
 MATLAB_PATH = r"./matlab_script"
 # FOLD_IDX = 5 # change this index each fold
-VERSION = "v14" # version of teeth silouette extraction model
+VERSION = "v21" # version of teeth silouette extraction model
 # EDGE_MASK_PATH = r"./dataWithPhoto/learning/fold{}/test/pred-{}/".format(FOLD_IDX,VERSION)
 STAGE0_MAT_DIR = os.path.join(MATLAB_PATH, "stage0-mat")
 DEMO_H5_DIR = r"./dataWithPhoto/demo/"
