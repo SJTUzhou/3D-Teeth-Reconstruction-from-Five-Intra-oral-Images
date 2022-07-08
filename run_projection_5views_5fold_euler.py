@@ -34,7 +34,7 @@ PARAM_DIR = r"./data/cpdGpParams/"
 SRC_DIR = r"./dataWithPhoto/cpdGpAlignedData/"
 SRC_PARAM_DIR = r"./dataWithPhoto/cpdGpParams/"
 
-NUM_PC = 3
+NUM_PC = 10 # 3
 NUM_POINT = 1500
 PG_SHAPE = (NUM_POINT, 3)
 UPPER_INDICES = [11,12,13,14,15,16,17,21,22,23,24,25,26,27] #不考虑智齿18,28

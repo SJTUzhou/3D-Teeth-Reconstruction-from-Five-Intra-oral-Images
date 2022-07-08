@@ -273,7 +273,7 @@ def run_emopt(TagID):
     # Save Demo Result
 
     demoH5File = r"./dataWithPhoto/demo/demo_TagID={}.h5".format(TagID)
-    proj.saveDemo2H5(demoH5File, emopt, TagID, X_Ref)
+    emopt.saveDemo2H5(demoH5File, emopt, TagID, X_Ref)
 
 
 

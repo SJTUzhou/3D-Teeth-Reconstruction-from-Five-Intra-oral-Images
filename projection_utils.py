@@ -382,30 +382,6 @@ def showPredPointClouds(y, py, mode=0):
         print("Invalid mode input; expected 0,1,2,3.")
 
 
-def saveDemo2H5(h5File, emopt, patientId, X_Ref):
-    if not os.path.exists(os.path.dirname(h5File)):
-        os.makedirs(os.path.dirname(h5File))
-    with h5py.File(h5File,'w') as f: #每次覆盖写入
-        grp = f.create_group(str(patientId))
-        grp.create_dataset("UPPER_INIT", data=np.array(emopt.X_Mu[:emopt.numUpperTooth], dtype=np.double))
-        grp.create_dataset("LOWER_INIT", data=np.array(emopt.X_Mu[emopt.numUpperTooth:], dtype=np.double))
-        grp.create_dataset("UPPER_PRED", data=np.array(emopt.X_trans[:emopt.numUpperTooth], dtype=np.double))
-        grp.create_dataset("LOWER_PRED", data=np.array(emopt.X_trans[emopt.numUpperTooth:], dtype=np.double))
-        grp.create_dataset("UPPER_REF", data=np.array(X_Ref[:emopt.numUpperTooth], dtype=np.double))
-        grp.create_dataset("LOWER_REF", data=np.array(X_Ref[emopt.numUpperTooth:], dtype=np.double))
-        grp.create_dataset("MASK", data=np.array(emopt.Mask, dtype=np.double))
-        grp.create_dataset("RELA_R", data=np.array(emopt.rela_R, dtype=np.double))
-        grp.create_dataset("RELA_T", data=np.array(emopt.rela_txyz, dtype=np.double))
-        grp.create_dataset("EX_RXYZ", data=np.array(emopt.ex_rxyz, dtype=np.double))
-        grp.create_dataset("EX_TXYZ", data=np.array(emopt.ex_txyz, dtype=np.double))
-        grp.create_dataset("FOCLTH", data=np.array(emopt.focLth, dtype=np.double))
-        grp.create_dataset("DPIX", data=np.array(emopt.dpix, dtype=np.double))
-        grp.create_dataset("U0", data=np.array(emopt.u0, dtype=np.double))
-        grp.create_dataset("V0", data=np.array(emopt.v0, dtype=np.double))
-        grp.create_dataset("SCALES", data=np.array(emopt.scales, dtype=np.double))
-        grp.create_dataset("ROT_ANGLE_XYZS", data=np.array(emopt.rotAngleXYZs, dtype=np.double))
-        grp.create_dataset("TRANS_VEC_XYZS", data=np.array(emopt.transVecXYZs, dtype=np.double))
-        grp.create_dataset("FEATURE_VEC", data=np.array(emopt.featureVec, dtype=np.double))
         
 def readDemoFromH5(h5File, patientId):
     with h5py.File(h5File, 'r') as f:

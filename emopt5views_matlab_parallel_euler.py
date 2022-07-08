@@ -540,7 +540,7 @@ class EMOpt5Views(object):
         # merge points at the same position in image coord
         # X_uv_int: array shape (n,2)dtype np.int32
         # pixels: array (m,2), each element represents (u_x, v_y)
-        pixels, unique_indices = np.unique(X_uv_int,axis=0,return_index=True)
+        pixels, unique_indices = np.unique(X_uv_int, axis=0,return_index=True)
         return pixels, unique_indices
     
     def __getConcaveHullEdgeVertexIndices(self, coords, alpha):  # coords is a 2D numpy array (u_x,v_y)
