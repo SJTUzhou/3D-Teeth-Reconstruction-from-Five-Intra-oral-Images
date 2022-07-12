@@ -453,7 +453,7 @@ def train():
 
     print(weight_ckpt)
     model_checkpoint = ModelCheckpoint(weight_ckpt, monitor='val_loss',verbose=2, save_best_only=True, save_weights_only=True)
-    # ret = model.fit(x=train_dg, validation_data=valid_dg, epochs=50, verbose=2, callbacks=[model_checkpoint])
+    ret = model.fit(x=train_dg, validation_data=valid_dg, epochs=50, verbose=2, callbacks=[model_checkpoint])
     model.load_weights(weight_ckpt)
 
     return model
