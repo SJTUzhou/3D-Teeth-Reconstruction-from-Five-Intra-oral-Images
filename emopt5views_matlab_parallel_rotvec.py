@@ -23,7 +23,7 @@ print = functools.partial(print, flush=True)
 
 class EMOpt5Views(object):
     # 使用COBYLA的启发式算法进行优化
-    def __init__(self, edgeMasks, photoTypes, visMasks, Mask, Mu, SqrtEigVals, Sigma, PoseCovMats, ScaleCovMat, transVecStd, rotAngleStd) -> None:
+    def __init__(self, edgeMasks, photoTypes, visMasks, Mask, Mu, SqrtEigVals, Sigma, PoseCovMats, ScaleCovMat, transVecStd, rotVecStd) -> None:
         self.photoTypes = sorted(photoTypes, key=lambda x:x.value)
         assert self.photoTypes == [PHOTO.UPPER, PHOTO.LOWER, PHOTO.LEFT, PHOTO.RIGHT, PHOTO.FRONTAL]
         
@@ -33,18 +33,6 @@ class EMOpt5Views(object):
             assert eMask.ndim == 2, "edgeMask should be grayscale" # 单通道Mask图片
             self.edgeMask[phType.value] = eMask # binary 2d-array
             self.visIdx[phType.value] = np.argwhere(visMask[Mask]>0).flatten()
-        
-        # self.P_true = [] # real edge point pos in image coord (u_x,v_y), 2d-array, shape=(?,2)
-        # self.P_true_normals = []
-        # _M0 = 6000
-        # _point_counts = np.count_nonzero(self.edgeMask[PHOTO.UPPER.value]>0)
-        # _ratio = _point_counts / _M0 if _point_counts >= _M0 else 1.
-        # for v in self.edgeMask:
-        #     _p_true = np.argwhere(v>0)[:,::-1]
-        #     _p_true_normal = self.initEdgeMaskNormals(_p_true)
-        #     _p_true_sampled, _flag = utils.farthestPointDownSample(_p_true, num_point_sampled=int(len(_p_true)/_ratio), return_flag=True) # down sampling for acceleration
-        #     self.P_true.append(_p_true_sampled)
-        #     self.P_true_normals.append(_p_true_normal[_flag])
 
         self.P_true = [np.argwhere(v>0)[:,::-1] for v in self.edgeMask]
         self.P_true_normals = [self.initEdgeMaskNormals(v) for v in self.P_true]
@@ -72,7 +60,7 @@ class EMOpt5Views(object):
         self.SqrtEigVals = SqrtEigVals[Mask]
         self.SigmaT = np.transpose(Sigma[Mask],(0,2,1))
 
-        self.meanRotAngleXYZs = np.zeros((self.numTooth,3)) # 每颗牙齿相对旋转角度的均值 # 待讨论
+        self.meanRotVecXYZs = np.zeros((self.numTooth,3)) # 每颗牙齿相对旋转角度的均值 # 待讨论
         self.meanTransVecXYZs = np.zeros((self.numTooth,3)) # 每颗牙齿相对平移的均值 # 待讨论
         self.meanScales = np.ones((self.numTooth,)) #每颗牙齿的相对尺寸
         self.invCovMats = np.linalg.inv(PoseCovMats[Mask])
@@ -82,9 +70,9 @@ class EMOpt5Views(object):
         self.numPC = SqrtEigVals.shape[-1] 
         self.featureVec = np.zeros(self.SqrtEigVals.shape, dtype=np.float64) # shape=(self.numTooth, 1, numPC), mean=0, std=1
         
-        # init teeth scales, rotation angles around X-Y-Z axes, translation vectors along X-Y-Z axes
+        # init teeth scales, rotation vecs around X-Y-Z axes, translation vectors along X-Y-Z axes
         self.scales = np.ones((self.numTooth,), np.float64)
-        self.rotAngleXYZs = np.zeros((self.numTooth,3), np.float64)
+        self.rotVecXYZs = np.zeros((self.numTooth,3), np.float64)
         self.transVecXYZs = np.zeros((self.numTooth,3), np.float64)
         
         self.rowScaleXZ = np.ones((2,), dtype=np.float64) # 各向异性牙列放缩, 仅用于maximization stage1, 在stage2之前转化为scale和transVecXYZs
@@ -93,15 +81,15 @@ class EMOpt5Views(object):
         # init extrinsic param of camera
         self.ex_rxyz_default = {PHOTO.UPPER: np.array([0.7*np.pi, 0., 0.], dtype=np.float64), # upper
                                 PHOTO.LOWER: np.array([-0.7*np.pi, 0., 0.], dtype=np.float64), # lower
-                                PHOTO.LEFT: np.array([np.pi, 0.3*np.pi, 0.], dtype=np.float64), # left
-                                PHOTO.RIGHT: np.array([np.pi, -0.3*np.pi, 0.], dtype=np.float64),  # right
+                                PHOTO.LEFT: np.array([2.80, 0, -1.42], dtype=np.float64), # left
+                                PHOTO.RIGHT: np.array([2.80, 0, 1.42], dtype=np.float64),  # right
                                 PHOTO.FRONTAL: np.array([np.pi, 0., 0.], dtype=np.float64)  }# frontal
         self.ex_txyz_default = {PHOTO.UPPER: np.array([0., 0., 70.], dtype=np.float64), # upper # 70
                                 PHOTO.LOWER: np.array([0., 0., 70.], dtype=np.float64),  # lower # 70
                                 PHOTO.LEFT: np.array([-5., 0., 120.], dtype=np.float64), # left # [-5,0,70]
                                 PHOTO.RIGHT: np.array([5., 0., 120.], dtype=np.float64),  # right # [5,0,70]
                                 PHOTO.FRONTAL: np.array([0., -2., 120.], dtype=np.float64) }  # frontal # [0,-2,70]
-        self.ex_rxyz = np.empty((5,3), dtype=np.float64) # shape=(5,3) # init rot angles around x-y-z axis based on photoType
+        self.ex_rxyz = np.empty((5,3), dtype=np.float64) # shape=(5,3) # init rot vecs around x-y-z axis based on photoType
         self.ex_txyz = np.empty((5,3), dtype=np.float64) # shape=(5,3) # init trans vector
         # init intrinsic param of camera
         self.focLth = np.empty((5,), dtype=np.float64)
@@ -140,7 +128,7 @@ class EMOpt5Views(object):
         # 用于设置COBYLA优化过程中的步长rhobeg
         self.transVecStd = transVecStd
         self.scaleStd = np.mean(np.sqrt(np.diag(ScaleCovMat)))
-        self.rotAngleStd = rotAngleStd
+        self.rotVecStd = rotVecStd
 
 
         self.X_deformed = self.X_Mu.copy() # np.empty(self.X_Mu.shape, dtype=np.float64)
@@ -212,7 +200,7 @@ class EMOpt5Views(object):
             o3d.visualization.draw_geometries([pcd], window_name="image edge normals estimation", width=800, height=600, left=50,top=50, point_show_normal=True)
         return np.asarray(pcd.normals, dtype=np.float64)[:,:2]
 
-    def initExtrinsicRotAngles(self, photoType):
+    def initExtrinsicRotVecs(self, photoType):
         ph = photoType.value
         self.ex_rxyz[ph] = self.ex_rxyz_default[photoType].copy()
     
@@ -230,7 +218,7 @@ class EMOpt5Views(object):
         self.v0[ph] = self.edgeMask[ph].shape[0]/2. # img.height/2
 
     def initExtrIntrParams(self, photoType):
-        self.initExtrinsicRotAngles(photoType)
+        self.initExtrinsicRotVecs(photoType)
         self.initExtrinsicTransVec(photoType)
         self.initCameraIntrinsicParams(photoType)
 
@@ -281,7 +269,7 @@ class EMOpt5Views(object):
             p3d_lst = p3d_lst[:ul_sp] + [x@rela_R+rela_txyz for x in p3d_lst[ul_sp:]]
         _exRotMat, ex_t, _intrProjMat_T = self.solveCameraParams(p2d, np.vstack(p3d_lst))
         self.ex_txyz[ph] = ex_t
-        self.ex_rxyz[ph] = RR.from_matrix(_exRotMat).as_euler("xyz")
+        self.ex_rxyz[ph] = RR.from_matrix(_exRotMat).as_rotvec()
         self.focLth[ph] = self.dpix[ph] * (_intrProjMat_T[0,0] + _intrProjMat_T[1,1])/2.
         self.u0[ph] = _intrProjMat_T[0,2]
         self.v0[ph] = _intrProjMat_T[1,2]
@@ -292,7 +280,7 @@ class EMOpt5Views(object):
         # print(paramName, value)
         # param name should be in ['r.x', 'r.y', 'r.z', 't.x', 't.y', 't.z']
         ph = photoType.value
-        xyz2i = {"x":0,"y":1,"z":2}
+        xyz2i = {"x":0,"y":1,"z":2,"xyz":[0,1,2]}
         r_t, x_y_z = paramName.split(".")
         i = xyz2i[x_y_z] # i=0,1,2
         if r_t == "r":
@@ -304,16 +292,16 @@ class EMOpt5Views(object):
             if assign2DefaultValue == True:
                 self.ex_txyz_default[photoType][i] = value
         else:
-            print("param name should be in ['rela.r.x', 'rela.r.y', 'rela.r.z', 'rela.t.x', 'rela.t.y', 'rela.t.z']")
+            print("param name should be in ['r.x', 'r.y', 'r.z', 'r.xyz', 't.x', 't.y', 't.z']")
 
 
     def gridSearchExtrinsicParams(self):
         # 对于每张图片，粗略搜索良好的初始条件, 更新时不考虑上下牙列相对位姿
         ExtrParamSearchSpace = {PHOTO.UPPER:{"r.x": np.pi*np.array([0.6, 0.65, 0.7, 0.75, 0.8],np.float64)},
                                 PHOTO.LOWER:{"r.x": np.pi*np.array([-0.6, -0.65, -0.7, -0.75, -0.8],np.float64)},
-                                PHOTO.LEFT:{"r.y": np.pi*np.array([0.1, 0.15, 0.2, 0.25, 0.3],np.float64)},
-                                PHOTO.RIGHT:{"r.y": np.pi*np.array([-0.1, -0.15, -0.2, -0.25, -0.3],np.float64)},}
-                                # PHOTO.FRONTAL:{"t.z": np.array([65,70,75],np.float64)} }
+                                PHOTO.LEFT:{"r.xyz": np.array([[3.11, 0, -0.49], [3.05, 0, -0.73], [2.99, 0, -0.97], [2.90, 0, -1.20], [2.80, 0, -1.43]],np.float64)},
+                                PHOTO.RIGHT:{"r.xyz": np.array([[3.11, 0, 0.49], [3.05, 0, 0.73], [2.99, 0, 0.97], [2.90, 0, 1.20], [2.80, 0, 1.43]],np.float64)},
+                                PHOTO.FRONTAL:{"r.x": np.pi*np.array([0.98, 1., 1.02],np.float64)} }
         self.initRelativeToothRowPose()
         for phType, paramDict in ExtrParamSearchSpace.items():
             ph = phType.value
@@ -461,8 +449,8 @@ class EMOpt5Views(object):
     ########################################################
     # Isotropic scaled rigid transformation for each tooth #
     ########################################################
-    def computeRotMats(self, rotAngleXYZs):
-        rotMats = RR.from_euler("xyz", rotAngleXYZs).as_matrix()
+    def computeRotMats(self, rotVecXYZs):
+        rotMats = RR.from_rotvec(rotVecXYZs).as_matrix()
         rotMats = np.transpose(rotMats, (0,2,1)) # 变为右乘
         return rotMats
     
@@ -482,7 +470,7 @@ class EMOpt5Views(object):
     ####################################################################
 
     def updateRelaRotMat(self, rela_rxyz):
-        return RR.from_euler("xyz", rela_rxyz).as_matrix().T
+        return RR.from_rotvec(rela_rxyz).as_matrix().T
 
     def updateLowerPointPosByRelaPose(self, X_lower, rela_R, rela_txyz):
         return np.matmul(X_lower, rela_R) + rela_txyz
@@ -496,7 +484,7 @@ class EMOpt5Views(object):
     ###############################
     def updateExtrinsicViewMatrix(self, ex_rxyz, ex_txyz): # world coord to camera coord
         # 先进行x轴旋转，再y轴，再z轴；取转置表示右乘旋转矩阵，再平移
-        R = RR.from_euler("xyz", ex_rxyz).as_matrix().T
+        R = RR.from_rotvec(ex_rxyz).as_matrix().T
         return np.vstack([R, ex_txyz]) # Matrix 4*3
         
     def updatePointPosInCameraCoord(self, X_world, extrViewMat):
@@ -540,7 +528,7 @@ class EMOpt5Views(object):
         # merge points at the same position in image coord
         # X_uv_int: array shape (n,2)dtype np.int32
         # pixels: array (m,2), each element represents (u_x, v_y)
-        pixels, unique_indices = np.unique(X_uv_int,axis=0,return_index=True)
+        pixels, unique_indices = np.unique(X_uv_int, axis=0,return_index=True)
         return pixels, unique_indices
     
     def __getConcaveHullEdgeVertexIndices(self, coords, alpha):  # coords is a 2D numpy array (u_x,v_y)
@@ -610,7 +598,7 @@ class EMOpt5Views(object):
         # 暂未考虑下牙列相对于上牙列的位姿关系
         self.X_deformed[tIdx] = self.updateDeformedPointPos(self.featureVec[tIdx], tIdx)
         self.X_deformed_normals[tIdx] = self.computePointNormals(self.X_deformed[tIdx])
-        self.RotMats[tIdx] = self.computeRotMats(self.rotAngleXYZs[tIdx])
+        self.RotMats[tIdx] = self.computeRotMats(self.rotVecXYZs[tIdx])
         self.X_trans[tIdx] = self.updateTransformedPointPos(self.X_deformed[tIdx], self.scales[tIdx], self.RotMats[tIdx], self.transVecXYZs[tIdx], tIdx)
         self.X_trans_normals[tIdx] = self.updateTransformedPointNormals(self.X_deformed_normals[tIdx], self.RotMats[tIdx])
         self.X_trans[tIdx] = np.hstack([self.rowScaleXZ[0],1.,self.rowScaleXZ[1]]) * self.X_trans[tIdx] # self.rowScaleXZ = [1.,1.,1.] after maximization stage 1
@@ -696,7 +684,7 @@ class EMOpt5Views(object):
         scipy.io.savemat(matFileName, {"np_invCovMatOfPose":self.invCovMats, "np_invCovMatOfScale":self.invCovMatOfScale,
                         "np_ex_rxyz":self.ex_rxyz, "np_ex_txyz":self.ex_txyz, "np_focLth":self.focLth, "np_dpix":self.dpix, 
                         "np_u0":self.u0, "np_v0":self.v0, "np_rela_rxyz":self.rela_rxyz, "np_rela_txyz":self.rela_txyz, "np_rowScaleXZ":self.rowScaleXZ, 
-                        "np_scales":self.scales, "np_rotAngleXYZs":self.rotAngleXYZs, "np_transVecXYZs":self.transVecXYZs,
+                        "np_scales":self.scales, "np_rotVecXYZs":self.rotVecXYZs, "np_transVecXYZs":self.transVecXYZs,
                         "np_X_Mu":self.X_Mu, "np_X_Mu_pred":self.X_Mu_pred, "np_X_Mu_pred_normals":self.X_Mu_pred_normals,
                         "np_visIdx":self.visIdx, "np_corre_pred_idx":self.corre_pred_idx, "np_P_true":self.P_true_99_percentile, "np_X_ref":X_Ref})
     
@@ -705,7 +693,7 @@ class EMOpt5Views(object):
         scipy.io.savemat(filename, {"np_invCovMatOfPose": self.invCovMats, "np_invCovMatOfScale": self.invCovMatOfScale,
                         "np_ex_rxyz": self.ex_rxyz, "np_ex_txyz": self.ex_txyz, "np_focLth": self.focLth, "np_dpix": self.dpix, 
                         "np_u0": self.u0, "np_v0": self.v0, "np_rela_rxyz": self.rela_rxyz, "np_rela_txyz": self.rela_txyz, "np_rowScaleXZ": self.rowScaleXZ, 
-                        "np_scales": self.scales, "np_rotAngleXYZs": self.rotAngleXYZs, "np_transVecXYZs": self.transVecXYZs,
+                        "np_scales": self.scales, "np_rotVecXYZs": self.rotVecXYZs, "np_transVecXYZs": self.transVecXYZs,
                         "np_X_Mu": self.X_Mu, "np_X_Mu_pred": self.X_Mu_pred, "np_X_Mu_pred_normals": self.X_Mu_pred_normals,
                         "np_visIdx": self.visIdx, "np_corre_pred_idx": self.corre_pred_idx, "np_P_true": self.P_true_99_percentile,})
 
@@ -726,7 +714,7 @@ class EMOpt5Views(object):
             self.rowScaleXZ = xOptDict["np_rowScaleXZ"]
         elif stage == 2:
             self.scales = xOptDict["np_scales"]
-            self.rotAngleXYZs = xOptDict["np_rotAngleXYZs"]
+            self.rotVecXYZs = xOptDict["np_rotVecXYZs"]
             self.transVecXYZs = xOptDict["np_transVecXYZs"]
 
 
@@ -782,7 +770,7 @@ class EMOpt5Views(object):
             self.rowScaleXZ = xOptDict["rowScaleXZ"]
         elif stage >= 2:
             self.scales = xOptDict["scales"]
-            self.rotAngleXYZs = xOptDict["rotAngleXYZs"]
+            self.rotVecXYZs = xOptDict["rotVecXYZs"]
             self.transVecXYZs = xOptDict["transVecXYZs"].T
 
 
@@ -808,7 +796,7 @@ class EMOpt5Views(object):
         self.rowScaleXZ = np.array([1.,1.], np.float64)
     
   
-    def computePixelResidualError(self, photoType, featureVec, scales, rotAngleXYZs, transVecXYZs, extrViewMat, intrProjMat,\
+    def computePixelResidualError(self, photoType, featureVec, scales, rotVecXYZs, transVecXYZs, extrViewMat, intrProjMat,\
         rela_R, rela_txyz, rowScaleXZ=np.ones((2,),np.float64), stage=1):
         # self.X_?_pred: List of array of points in Mu teeth shape, [ndarray1, ndarray2, ...]
         # self.corre_pred_idx: corre indices after vertically stacking the transformed self.X_?_pred
@@ -830,7 +818,7 @@ class EMOpt5Views(object):
             X_deformed_pred_normals = self.X_deformed_pred_normals[ph]
         
         if stage >= 2: # 考虑每颗牙齿的相对位姿和尺寸
-            rotMats = self.computeRotMats(rotAngleXYZs)
+            rotMats = self.computeRotMats(rotVecXYZs)
             X_trans_pred = [s*np.matmul(x-tc,R)+t+tc for x,s,R,t,tc in zip(X_deformed_pred, scales, rotMats, transVecXYZs, self.X_Mu_centroids[tIdx])] # 轮廓点对应原始点云按牙齿分别进行缩放刚性变换
             X_trans_pred_normals = [np.matmul(xn,R) for xn,R in zip(X_deformed_pred_normals, rotMats)]
             
@@ -873,20 +861,20 @@ class EMOpt5Views(object):
 
     def parseTeethPoseParams(self, params, pIdx, step):
         transVecXYZs = self.transVecXYZs
-        rotAngleXYZs = self.rotAngleXYZs
+        rotVecXYZs = self.rotVecXYZs
         scales = self.scales
         numT = self.numTooth
         if step == 1:
             transVecXYZs = params[pIdx["tXYZs"]:pIdx["tXYZs"]+numT*3].reshape(numT, 3)
         elif step == 2:
-            rotAngleXYZs = params[pIdx["rXYZs"]:pIdx["rXYZs"]+numT*3].reshape(numT, 3)
+            rotVecXYZs = params[pIdx["rXYZs"]:pIdx["rXYZs"]+numT*3].reshape(numT, 3)
         elif step == 3:
             scales = params[pIdx["scales"]:pIdx["scales"]+numT]
         elif step == 4:
             transVecXYZs = self.transVecStd * params[pIdx["tXYZs"]:pIdx["tXYZs"]+numT*3].reshape(numT, 3)
-            rotAngleXYZs = self.rotAngleStd * params[pIdx["rXYZs"]:pIdx["rXYZs"]+numT*3].reshape(numT, 3)
+            rotVecXYZs = self.rotVecStd * params[pIdx["rXYZs"]:pIdx["rXYZs"]+numT*3].reshape(numT, 3)
             scales = 1. + self.scaleStd * params[pIdx["scales"]:pIdx["scales"]+numT]
-        return transVecXYZs, rotAngleXYZs, scales
+        return transVecXYZs, rotVecXYZs, scales
 
 
 
@@ -908,13 +896,13 @@ class EMOpt5Views(object):
                 x0 = np.hstack([x0, self.transVecXYZs.flatten()])
             elif step == 2:
                 pIdx["rXYZs"] = len(x0)
-                x0 = np.hstack([x0, self.rotAngleXYZs.flatten()])
+                x0 = np.hstack([x0, self.rotVecXYZs.flatten()])
             elif step == 3:
                 pIdx["scales"] = len(x0)
                 x0 = np.hstack([x0, self.scales])
             elif step == 4:
                 pIdx.update({"tXYZs":len(x0), "rXYZs":len(x0)+self.numTooth*3, "scales":len(x0)+self.numTooth*6})
-                x0 = np.hstack([x0, (self.transVecXYZs/self.transVecStd).flatten(), (self.rotAngleXYZs/self.rotAngleStd).flatten(), (self.scales-1.)/self.scaleStd])
+                x0 = np.hstack([x0, (self.transVecXYZs/self.transVecStd).flatten(), (self.rotVecXYZs/self.rotVecStd).flatten(), (self.scales-1.)/self.scaleStd])
         elif stage == 3:
             pIdx["featureVec"] = len(x0)
             x0 = np.hstack([x0, self.featureVec.flatten()])
@@ -922,8 +910,8 @@ class EMOpt5Views(object):
 
 
     # 计算牙齿位姿的损失 negative log likelihood
-    def computeTeethPoseResidualError(self, scales, rotAngleXYZs, transVecXYZs, tIdx):
-        centeredPoseParams = np.hstack([(transVecXYZs-self.meanTransVecXYZs[tIdx]), (rotAngleXYZs-self.meanRotAngleXYZs[tIdx])]) # shape=(self.numTooth,7)
+    def computeTeethPoseResidualError(self, scales, rotVecXYZs, transVecXYZs, tIdx):
+        centeredPoseParams = np.hstack([(transVecXYZs-self.meanTransVecXYZs[tIdx]), (rotVecXYZs-self.meanRotVecXYZs[tIdx])]) # shape=(self.numTooth,7)
         centeredScales = scales - self.meanScales[tIdx]
         errorTeethPose = np.sum(np.matmul(np.matmul(centeredPoseParams[:,None,:], self.invCovMats[tIdx,:,:]), centeredPoseParams[:,:,None]))
         errorScales = centeredScales @ self.invCovMatOfScale[tIdx,tIdx[:,None]] @ centeredScales
@@ -934,7 +922,7 @@ class EMOpt5Views(object):
     def MStepLoss(self, params, pIdx, stage, step, verbose):
         ex_rxyz, ex_txyz, focLth, dpix, u0, v0, rela_rxyz, rela_txyz = self.parseGlobalParamsOf5Views(params, pIdx)
         rowScaleXZ = np.ones((2,))
-        transVecXYZs, rotAngleXYZs, scales = self.parseTeethPoseParams(params, pIdx, step)
+        transVecXYZs, rotVecXYZs, scales = self.parseTeethPoseParams(params, pIdx, step)
         ex_R = self.computeRotMats(ex_rxyz)
         rela_R = self.updateRelaRotMat(rela_rxyz)
         extrViewMats = np.concatenate([ex_R, ex_txyz[:,None,:]], axis=1)
@@ -945,7 +933,7 @@ class EMOpt5Views(object):
             rowScaleXZ = params[pIdx["rowScaleXZ"]:pIdx["rowScaleXZ"]+2]
             # rowScaleXYZ = np.array([rowScaleXZ[0], 1., rowScaleXZ[1]])
             # scales = np.prod(rowScaleXYZ)**(1/3) * np.ones((self.numTooth,))
-            # rotAngleXYZs = np.zeros((self.numTooth,3))
+            # rotVecXYZs = np.zeros((self.numTooth,3))
             # transVecXYZs = self.X_Mu_centroids * (rowScaleXYZ - 1.)
             equiva_scale = np.prod(rowScaleXZ)**(1/3)
             aniScaleError = self.weightAniScale * (equiva_scale-1.)**2 / self.scaleStd**2
@@ -957,12 +945,12 @@ class EMOpt5Views(object):
             ph = phType.value
             tIdx = self.visIdx[ph]
             intrProjMat = self.updateIntrinsicProjectionMatrix(focLth[ph], dpix[ph], u0[ph], v0[ph])
-            pixelError = self.computePixelResidualError(phType, featureVec[tIdx], scales[tIdx], rotAngleXYZs[tIdx], transVecXYZs[tIdx],\
+            pixelError = self.computePixelResidualError(phType, featureVec[tIdx], scales[tIdx], rotVecXYZs[tIdx], transVecXYZs[tIdx],\
                 extrViewMats[ph], intrProjMat, rela_R, rela_txyz, rowScaleXZ, stage)
             teethPoseError = 0.
             featureVecError = 0.
             if stage == 2:
-                teethPoseError = self.computeTeethPoseResidualError(scales[tIdx], rotAngleXYZs[tIdx], transVecXYZs[tIdx], tIdx)
+                teethPoseError = self.computeTeethPoseResidualError(scales[tIdx], rotVecXYZs[tIdx], transVecXYZs[tIdx], tIdx)
             elif stage == 3:
                 featureVecError = self.weightFeatureVec * np.sum(featureVec[tIdx]**2)
             if verbose == True:
@@ -982,11 +970,11 @@ class EMOpt5Views(object):
             if step == 1:
                 rhobeg = rhobeg * self.transVecStd
             elif step == 2:
-                rhobeg = rhobeg * self.rotAngleStd
+                rhobeg = rhobeg * self.rotVecStd
             elif step == 3:
                 rhobeg = rhobeg * self.scaleStd
             elif step == 4:
-                rhobeg = rhobeg * (self.transVecStd + self.rotAngleStd + self.scaleStd)
+                rhobeg = rhobeg * (self.transVecStd + self.rotVecStd + self.scaleStd)
         elif stage == 3:
             for phType in self.photoTypes:
                 self.SigmaT_segs[phType.value] = self.updateCorreSigmaTSegs(phType)
@@ -1000,7 +988,7 @@ class EMOpt5Views(object):
         if stage == 1:
             self.rowScaleXZ = params[pIdx["rowScaleXZ"]:pIdx["rowScaleXZ"]+2]
         elif stage == 2:
-            self.transVecXYZs, self.rotAngleXYZs, self.scales = self.parseTeethPoseParams(params, pIdx, step)
+            self.transVecXYZs, self.rotVecXYZs, self.scales = self.parseTeethPoseParams(params, pIdx, step)
         elif stage == 3:
             self.featureVec = params[pIdx["featureVec"]:pIdx["featureVec"]+self.numTooth*self.numPC].reshape(self.featureVec.shape)
         self.loss_maximization_step = self.MStepLoss(params, pIdx, stage, step, verbose)
@@ -1046,7 +1034,7 @@ class EMOpt5Views(object):
             grp.create_dataset("U0", data=np.array(self.u0, dtype=np.double))
             grp.create_dataset("V0", data=np.array(self.v0, dtype=np.double))
             grp.create_dataset("SCALES", data=np.array(self.scales, dtype=np.double))
-            grp.create_dataset("ROT_ANGLE_XYZS", data=np.array(self.rotAngleXYZs, dtype=np.double))
+            grp.create_dataset("ROT_ANGLE_XYZS", data=np.array(self.rotVecXYZs, dtype=np.double))
             grp.create_dataset("TRANS_VEC_XYZS", data=np.array(self.transVecXYZs, dtype=np.double))
             grp.create_dataset("FEATURE_VEC", data=np.array(self.featureVec, dtype=np.double))
 

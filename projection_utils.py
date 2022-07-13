@@ -269,11 +269,11 @@ def updateAbsTransVecs(invParamDF, Mu):
     numTooth = len(toothIndices)
     X_Mu_centroids = {tID:Mu[i].mean(axis=0) for i,tID in enumerate(toothIndices)}
     invScalesColumns = ["{}s".format(id) for id in toothIndices]
-    invRotAngleXYZColumns = ["{}r{}".format(id, p) for id in toothIndices for p in ["x","y","z"]]
+    invRotVecXYZColumns = ["{}r{}".format(id, p) for id in toothIndices for p in ["x","y","z"]]
     invTransVecXYZColumns = ["{}t{}".format(id, p) for id in toothIndices for p in ["x","y","z"]]
     invTransVecShiftColumns = ["upper_ts", "lower_ts"]
     invScales = invParamDF[invScalesColumns].to_numpy()
-    invRotVecs = invParamDF[invRotAngleXYZColumns].to_numpy().reshape(numSample, numTooth, 3)
+    invRotVecs = invParamDF[invRotVecXYZColumns].to_numpy().reshape(numSample, numTooth, 3)
     invTransVecs = invParamDF[invTransVecXYZColumns].to_numpy().reshape(numSample, numTooth, 3)
     invTransVecShifts = np.concatenate([np.stack(invParamDF["upper_ts"].to_list()), np.stack(invParamDF["lower_ts"].to_list())], axis=1)
     
@@ -294,18 +294,18 @@ def getMeanAndVarianceOfInvRegistrationParams(invParamDF):
     toothIndices = UPPER_INDICES+LOWER_INDICES
     numTooth = len(toothIndices)
     invScalesColumns = ["{}s".format(id) for id in toothIndices]
-    invRotAngleXYZColumns = ["{}r{}".format(id, p) for id in toothIndices for p in ["x","y","z"]]
+    invRotVecXYZColumns = ["{}r{}".format(id, p) for id in toothIndices for p in ["x","y","z"]]
     invTransVecXYZColumns = ["{}t{}".format(id, p) for id in toothIndices for p in ["x","y","z"]]
     invScales = invParamDF[invScalesColumns].to_numpy()
     invScaleMeans = np.nanmean(invScales, axis=0)
     invScaleVars = np.nanvar(invScales, ddof=1, axis=0)
-    invRotAngleXYZs = invParamDF[invRotAngleXYZColumns].to_numpy()
-    invRotAngleXYZMeans = np.nanmean(invRotAngleXYZs, axis=0).reshape(numTooth,3)
-    invRotAngleXYZVars = np.nanvar(invRotAngleXYZs, ddof=1, axis=0).reshape(numTooth,3)
+    invRotVecXYZs = invParamDF[invRotVecXYZColumns].to_numpy()
+    invRotVecXYZMeans = np.nanmean(invRotVecXYZs, axis=0).reshape(numTooth,3)
+    invRotVecXYZVars = np.nanvar(invRotVecXYZs, ddof=1, axis=0).reshape(numTooth,3)
     invTransVecXYZs = invParamDF[invTransVecXYZColumns].to_numpy()
     invTransVecXYZMeans = np.nanmean(invTransVecXYZs, axis=0).reshape(numTooth,3)
     invTransVecXYZVars = np.nanvar(invTransVecXYZs, ddof=1, axis=0).reshape(numTooth,3)
-    return invScaleMeans, invScaleVars, invRotAngleXYZMeans, invRotAngleXYZVars, invTransVecXYZMeans, invTransVecXYZVars
+    return invScaleMeans, invScaleVars, invRotVecXYZMeans, invRotVecXYZVars, invTransVecXYZMeans, invTransVecXYZVars
 
 
 def GetPoseCovMats(invParamDF, toothIndices):
@@ -345,15 +345,6 @@ def GetScaleCovMat(invParamDF, toothIndices):
 ###############################
 ############ Demo #############
 ###############################
-
-
-def saveTempEmOptParamsWithXRef(matFileName, emopt, X_Ref):
-    scipy.io.savemat(matFileName, {"np_invCovMatOfPose":emopt.invCovMats, "np_invCovMatOfScale":emopt.invCovMatOfScale,
-                    "np_ex_rxyz":emopt.ex_rxyz, "np_ex_txyz":emopt.ex_txyz, "np_focLth":emopt.focLth, "np_dpix":emopt.dpix, 
-                    "np_u0":emopt.u0, "np_v0":emopt.v0, "np_rela_rxyz":emopt.rela_rxyz, "np_rela_txyz":emopt.rela_txyz, "np_rowScaleXZ":emopt.rowScaleXZ, 
-                    "np_scales":emopt.scales, "np_rotAngleXYZs":emopt.rotAngleXYZs, "np_transVecXYZs":emopt.transVecXYZs,
-                    "np_X_Mu":emopt.X_Mu, "np_X_Mu_pred":emopt.X_Mu_pred, "np_X_Mu_pred_normals":emopt.X_Mu_pred_normals,
-                    "np_visIdx":emopt.visIdx, "np_corre_pred_idx":emopt.corre_pred_idx, "np_P_true":emopt.P_true_95_percentile, "np_X_ref":X_Ref})
 
 
 

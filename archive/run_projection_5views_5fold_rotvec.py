@@ -14,7 +14,6 @@ import functools
 import matlab.engine
 import ray
 import psutil
-# from emopt5views_matlab import EMOpt5Views, PHOTO
 from emopt5views_matlab_parallel_rotvec import EMOpt5Views, PHOTO
 
 

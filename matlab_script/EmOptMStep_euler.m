@@ -27,10 +27,10 @@ classdef EmOptMStep < handle
 
         % parameters optimized in Stage2 
         scales; % array (1,numAllTeeth)
-        rotVecXYZs; % array (numAllTeeth,3)
+        rotAngleXYZs; % array (numAllTeeth,3)
         transVecXYZs; % array (3,numAllTeeth)
         scaleStd; % double
-        rotVecStd; % double
+        rotAngleStd; % double
         transVecStd; % double
 
         % Constant variables (may be loaded from data)
@@ -52,7 +52,7 @@ classdef EmOptMStep < handle
         function obj = EmOptMStep(np_X_Mu, np_X_Mu_pred, np_X_Mu_pred_normals,...
                 np_visIdx, np_corre_pred_idx, np_P_true, np_ex_rxyz, np_ex_txyz, np_focLth, np_dpix,...
                 np_u0, np_v0, np_rela_rxyz, np_rela_txyz, np_rowScaleXZ, np_scales,...
-                np_rotVecXYZs, np_transVecXYZs, np_invCovMatOfScale, np_invCovMatOfPose)
+                np_rotAngleXYZs, np_transVecXYZs, np_invCovMatOfScale, np_invCovMatOfPose)
 
             obj.X_Mu = double(permute(np_X_Mu,[3,2,1])); %transpose
             [~,~,obj.NumAllTeeth] = size(obj.X_Mu);
@@ -131,11 +131,11 @@ classdef EmOptMStep < handle
             
             % parameters optimized in Stage2
             obj.scales = double(np_scales); 
-            obj.rotVecXYZs = double(np_rotVecXYZs);
+            obj.rotAngleXYZs = double(np_rotAngleXYZs);
             obj.transVecXYZs = double(np_transVecXYZs'); %transpose
 
             obj.scaleStd = 0.0677;
-            obj.rotVecStd = 1.1812;
+            obj.rotAngleStd = 1.1812;
             obj.transVecStd = 0.1395;
 
             
@@ -153,10 +153,10 @@ classdef EmOptMStep < handle
         end
         
         % 计算2D像素空间中的损失
-        function pixelError = computePixelResidualError(obj, photoType, scales, rotVecXYZs, transVecXYZs,...
+        function pixelError = computePixelResidualError(obj, photoType, scales, rotAngleXYZs, transVecXYZs,...
             ex_R, ex_txyz, intrProjMat, rela_R, rela_txyz, rowScaleXZ, stage)
             % scales.shape = (1,numToothPh)
-            % rotVecXYZs.shape = (numToothPh,3)
+            % rotAngleXYZs.shape = (numToothPh,3)
             % transVecXYZs.shape = (3,numToothPh)
             % ex_txyz.shape = (3,1)
             % rela_txyz.shape = (3,1)
@@ -177,7 +177,7 @@ classdef EmOptMStep < handle
 
             %考虑每颗牙齿的相对位姿和尺寸
             if stage >= 2 
-                rotMats = EmOptMStep.computeRotMats(rotVecXYZs);
+                rotMats = EmOptMStep.computeRotMats(rotAngleXYZs);
                 for i = 1:numToothPh
                     x = X_deformed_pred{i}; % array (3,?)
                     if isempty(x) % 某颗牙齿的轮廓被完全遮住的情况
@@ -231,9 +231,9 @@ classdef EmOptMStep < handle
         end
 
         % 计算牙齿相对位姿的损失
-        function teethPoseError = computeTeethPoseResidualError(obj, scales, rotVecXYZs, transVecXYZs, tIdx)
-            % Suppose mean(scales) = 1; mean(rotVecXYZs) = 0; mean(transVecXYZs) = 0
-            pose6Dparams = vertcat(transVecXYZs, rotVecXYZs'); % size=(6,numToothPh)
+        function teethPoseError = computeTeethPoseResidualError(obj, scales, rotAngleXYZs, transVecXYZs, tIdx)
+            % Suppose mean(scales) = 1; mean(rotAngleXYZs) = 0; mean(transVecXYZs) = 0
+            pose6Dparams = vertcat(transVecXYZs, rotAngleXYZs'); % size=(6,numToothPh)
             pose6DInvCovMat = obj.invCovMatOfPose(:,:,tIdx); % size=(6,6,numToothPh)
             scaleInvCovMat = obj.invCovMatOfScale(tIdx,tIdx); % size=(numToothPh,numToothPh)
             errorScale = (scales-1) * scaleInvCovMat * (scales'-1);
@@ -258,7 +258,7 @@ classdef EmOptMStep < handle
             end
             rowScaleXZ = [1, 1];
             scales = obj.scales;
-            rotVecXYZs = obj.rotVecXYZs;
+            rotAngleXYZs = obj.rotAngleXYZs;
             transVecXYZs = obj.transVecXYZs;
             
             % Only for stage 1
@@ -267,11 +267,11 @@ classdef EmOptMStep < handle
                 rowScaleXZ = params(pIdx("rowScaleXZ"):pIdx("rowScaleXZ")+1);
 %                 rowScaleXYZ = [rowScaleXZ(1);1;rowScaleXZ(2)];
 %                 scales = prod(rowScaleXYZ)^(1/3) * ones([1,obj.NumAllTeeth]);
-%                 rotVecXYZs = zeros([obj.NumAllTeeth,3]);
+%                 rotAngleXYZs = zeros([obj.NumAllTeeth,3]);
 %                 transVecXYZs = obj.X_Mu_centroids .* (rowScaleXYZ - 1);
 %                 equiva_tIdx = 1:obj.NumAllTeeth;
 %                 aniScaleError = obj.computeTeethPoseResidualError(scales,...
-%                     rotVecXYZs, transVecXYZs, equiva_tIdx);
+%                     rotAngleXYZs, transVecXYZs, equiva_tIdx);
                 equiva_scale = prod(rowScaleXZ)^(1/3);
                 aniScaleError = obj.weightAniScale * (equiva_scale-1)^2 / obj.varScale;
             end
@@ -284,12 +284,12 @@ classdef EmOptMStep < handle
                         transVecXYZs = reshape(params(pIdx("tXYZs"):pIdx("tXYZs")+3*obj.NumAllTeeth-1),...
                             [3,obj.NumAllTeeth]);
                     case 2
-                        rotVecXYZs = reshape(params(pIdx("rXYZs"):pIdx("rXYZs")+3*obj.NumAllTeeth-1),...
+                        rotAngleXYZs = reshape(params(pIdx("rXYZs"):pIdx("rXYZs")+3*obj.NumAllTeeth-1),...
                             [obj.NumAllTeeth,3]);
                     case 3
                         scales = params(pIdx("scales"):pIdx("scales")+obj.NumAllTeeth-1);
                     case 4
-                        [scales, rotVecXYZs, transVecXYZs] =...
+                        [scales, rotAngleXYZs, transVecXYZs] =...
                             EmOptMStep.parseTeethPoseParams(params, pIdx, obj.NumAllTeeth);
                 end
             end
@@ -298,13 +298,13 @@ classdef EmOptMStep < handle
             for phType = obj.photoTypes
                 ph = uint32(phType);
                 tIdx = obj.visIdx{ph};
-                pixelError = obj.computePixelResidualError(phType, scales(tIdx), rotVecXYZs(tIdx,:),...
+                pixelError = obj.computePixelResidualError(phType, scales(tIdx), rotAngleXYZs(tIdx,:),...
                     transVecXYZs(:,tIdx), ex_R(:,:,ph), ex_txyz(:,ph), intrProjMat(:,:,ph),...
                     rela_R, rela_txyz, rowScaleXZ, stage);
                 % For Stage 2 and 3
                 teethPoseError = 0;
                 if stage == 2 
-                    teethPoseError = obj.computeTeethPoseResidualError(scales(tIdx), rotVecXYZs(tIdx,:),...
+                    teethPoseError = obj.computeTeethPoseResidualError(scales(tIdx), rotAngleXYZs(tIdx,:),...
                         transVecXYZs(:,tIdx), tIdx);
                 end
                 if verbose == true
@@ -334,7 +334,7 @@ classdef EmOptMStep < handle
                         x0 = horzcat(x0, reshape(obj.transVecXYZs,1,[]));
                     case 2
                         pIdx("rXYZs") = length(x0) + 1;
-                        x0 = horzcat(x0, reshape(obj.rotVecXYZs,1,[]));
+                        x0 = horzcat(x0, reshape(obj.rotAngleXYZs,1,[]));
                     case 3
                         pIdx("scales") = length(x0) + 1;
                         x0 = horzcat(x0, obj.scales);
@@ -342,7 +342,7 @@ classdef EmOptMStep < handle
                         pIdx("tXYZs") = length(x0) + 1;
                         pIdx("rXYZs") = length(x0) + 3*obj.NumAllTeeth + 1;
                         pIdx("scales") = length(x0) + 6*obj.NumAllTeeth + 1;
-                        x0 = horzcat(x0, reshape(obj.transVecXYZs,1,[]), reshape(obj.rotVecXYZs,1,[]), obj.scales);
+                        x0 = horzcat(x0, reshape(obj.transVecXYZs,1,[]), reshape(obj.rotAngleXYZs,1,[]), obj.scales);
                 end
             end
         end
@@ -407,11 +407,11 @@ classdef EmOptMStep < handle
                     case 1
                         obj.transVecXYZs = reshape(params(pIdx("tXYZs"):pIdx("tXYZs")+3*obj.NumAllTeeth-1), [3,obj.NumAllTeeth]);
                     case 2
-                        obj.rotVecXYZs = reshape(params(pIdx("rXYZs"):pIdx("rXYZs")+3*obj.NumAllTeeth-1), [obj.NumAllTeeth,3]);
+                        obj.rotAngleXYZs = reshape(params(pIdx("rXYZs"):pIdx("rXYZs")+3*obj.NumAllTeeth-1), [obj.NumAllTeeth,3]);
                     case 3
                         obj.scales = params(pIdx("scales"):pIdx("scales")+obj.NumAllTeeth-1);
                     case 4
-                        [obj.scales, obj.rotVecXYZs, obj.transVecXYZs] =...
+                        [obj.scales, obj.rotAngleXYZs, obj.transVecXYZs] =...
                             EmOptMStep.parseTeethPoseParams(params, pIdx, obj.NumAllTeeth);
                 end
             end
@@ -421,7 +421,7 @@ classdef EmOptMStep < handle
         function X_pred = reconstruct3D(obj)
             [~,~,numTeeth] = size(obj.X_Mu);
             X_pred = zeros(size(obj.X_Mu));
-            rotMats = EmOptMStep.computeRotMats(obj.rotVecXYZs);
+            rotMats = EmOptMStep.computeRotMats(obj.rotAngleXYZs);
             for i = 1:numTeeth
                 X_pred(:,:,i) = obj.scales(i) * rotMats(:,:,i) * (obj.X_Mu(:,:,i) - obj.X_Mu_centroids(:,i))...
                     + obj.transVecXYZs(:,i) + obj.X_Mu_centroids(:,i);
@@ -434,18 +434,9 @@ classdef EmOptMStep < handle
     
     % 静态方法
     methods(Static)
-        % 左乘旋转矩阵 convert rotvec rXYZ to left-multiplication matrix
+        % 左乘旋转矩阵 convert euler angle rXYZ to left-multiplication matrix
         function rotMats = computeRotMats(rxyz)
-            % rotMats.size = (3,3) or (3,3,?)
-            if isvector(rxyz)
-                rotMats = rotationVectorToMatrix(rxyz)';
-            elseif ismatrix(rxyz)
-                [n, ~] = size(rxyz);
-                rotMats = zeros(3, 3, n);
-                for i = 1:n
-                    rotMats(:,:,i) = rotationVectorToMatrix(rxyz(i,:))';
-                end
-            end
+            rotMats = eul2rotm(rxyz(:,end:-1:1),"ZYX"); % size = (3,3) or (3,3,?)
         end
         
         % 相机投影矩阵
@@ -464,9 +455,9 @@ classdef EmOptMStep < handle
             rela_txyz = params(pIdx("rela_txyz"):pIdx("rela_txyz")+2)'; % transpose
         end
         
-        function [scales, rotVecXYZs, transVecXYZs] = parseTeethPoseParams(params, pIdx, numTeeth)
+        function [scales, rotAngleXYZs, transVecXYZs] = parseTeethPoseParams(params, pIdx, numTeeth)
             scales = params(pIdx("scales"):pIdx("scales")+numTeeth-1);
-            rotVecXYZs = reshape(params(pIdx("rXYZs"):pIdx("rXYZs")+3*numTeeth-1), [numTeeth,3]);
+            rotAngleXYZs = reshape(params(pIdx("rXYZs"):pIdx("rXYZs")+3*numTeeth-1), [numTeeth,3]);
             transVecXYZs = reshape(params(pIdx("tXYZs"):pIdx("tXYZs")+3*numTeeth-1), [3,numTeeth]);
         end
         

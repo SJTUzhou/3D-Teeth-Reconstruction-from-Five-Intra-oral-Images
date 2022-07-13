@@ -5,12 +5,12 @@ function run_MStep(stage, maxFuncEval, mat2Load, mat2Save)
     load(mat2Load, 'np_X_Mu', 'np_X_Mu_pred', 'np_X_Mu_pred_normals',...
         'np_visIdx', 'np_corre_pred_idx', 'np_P_true', 'np_ex_rxyz', 'np_ex_txyz', 'np_focLth', 'np_dpix',...
         'np_u0', 'np_v0', 'np_rela_rxyz', 'np_rela_txyz', 'np_rowScaleXZ', 'np_scales',...
-        'np_rotVecXYZs', 'np_transVecXYZs', 'np_invCovMatOfScale', 'np_invCovMatOfPose');
+        'np_rotAngleXYZs', 'np_transVecXYZs', 'np_invCovMatOfScale', 'np_invCovMatOfPose');
     
     emoptMstep = EmOptMStep(np_X_Mu, np_X_Mu_pred, np_X_Mu_pred_normals,...
                     np_visIdx, np_corre_pred_idx, np_P_true, np_ex_rxyz, np_ex_txyz, np_focLth, np_dpix,...
                     np_u0, np_v0, np_rela_rxyz, np_rela_txyz, np_rowScaleXZ, np_scales,...
-                    np_rotVecXYZs, np_transVecXYZs, np_invCovMatOfScale, np_invCovMatOfPose);
+                    np_rotAngleXYZs, np_transVecXYZs, np_invCovMatOfScale, np_invCovMatOfPose);
     
     
     
@@ -35,7 +35,7 @@ function run_MStep(stage, maxFuncEval, mat2Load, mat2Save)
 %             end
             [x_opt, M_loss] = fmincon(@(x)emoptMstep.MStepLoss(x,pIdx,stage,step,false),x0,A,b,Aeq,beq,lb,ub,nonlcon,options);
             emoptMstep.updateParamsOf5Views(x_opt, pIdx, stage, step); % update params from x_opt
-        case 2 % optimize global parameters with scales, rotVecXYZs, transVecXYZs
+        case 2 % optimize global parameters with scales, rotAngleXYZs, transVecXYZs
 %             step = 4;
 %             [x0, pIdx] = emoptMstep.getCurrentParamsOf5Views_as_x0(stage, step);
 %             [lb, ub] = emoptMstep.getBoundsOnParams(stage, step);
@@ -56,10 +56,10 @@ function run_MStep(stage, maxFuncEval, mat2Load, mat2Save)
     [ex_rxyz, ex_txyz, focLth, dpix, u0, v0, rela_rxyz, rela_txyz] = emoptMstep.parseGlobalParamsOf5Views(x_opt, pIdx);
     rowScaleXZ = emoptMstep.rowScaleXZ; 
     scales = emoptMstep.scales;
-    rotVecXYZs = emoptMstep.rotVecXYZs;
+    rotAngleXYZs = emoptMstep.rotAngleXYZs;
     transVecXYZs = emoptMstep.transVecXYZs;
     
     % save params into .mat file
     save(mat2Save, "ex_rxyz", "ex_txyz", "focLth", "dpix", "u0", "v0", "rela_rxyz", "rela_txyz", "rowScaleXZ",...
-        "scales", "rotVecXYZs", "transVecXYZs", "M_loss");
+        "scales", "rotAngleXYZs", "transVecXYZs", "M_loss");
 end
