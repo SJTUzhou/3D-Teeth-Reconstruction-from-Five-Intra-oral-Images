@@ -1,5 +1,4 @@
 import numpy as np
-from copy import deepcopy
 import cycpd
 import os 
 import open3d as o3d
@@ -121,7 +120,7 @@ class EMOpt5Views(object):
         self.varPlane = 0.5  # param in residual pixel error in maximization loss
         # weight in maximization step for 5 views: [PHOTO.UPPER, PHOTO.LOWER, PHOTO.LEFT, PHOTO.RIGHT, PHOTO.FRONTAL]
 
-        self.weightViews = np.array([1.,1.,1.,1.,1.], dtype=np.float64) # [3,3,1,1,1]
+        self.weightViews = np.array([2.,2.,1.,1.,1.], dtype=np.float64) # [3,3,1,1,1]
         self.weightAniScale = 1.
         self.weightTeethPose = 1. # param in residual teeth pose error in maximization loss
         self.weightFeatureVec = 1. # param in residual featureVec error in maximization loss
@@ -798,16 +797,16 @@ class EMOpt5Views(object):
     
   
     def computePixelResidualError(self, photoType, featureVec, scales, rotVecXYZs, transVecXYZs, extrViewMat, intrProjMat,\
-        rela_R, rela_txyz, rowScaleXZ=np.ones((2,),np.float64), stage=1, return_grad=False):
+        rela_R, rela_txyz, rowScaleXZ=np.ones((2,),np.float64), stage=1):
         # self.X_?_pred: List of array of points in Mu teeth shape, [ndarray1, ndarray2, ...]
         # self.corre_pred_idx: corre indices after vertically stacking the transformed self.X_?_pred
         
         ph = photoType.value
         tIdx = self.visIdx[ph]
         X_deformed_pred = self.X_deformed_pred[ph]
-        _X_trans_pred = self.X_deformed_pred[ph]
+        X_trans_pred = self.X_deformed_pred[ph]
         X_deformed_pred_normals = self.X_deformed_pred_normals[ph]
-        _X_trans_pred_normals = self.X_deformed_pred_normals[ph]
+        X_trans_pred_normals = self.X_deformed_pred_normals[ph]
 
         if stage >= 3: # 考虑shape subspace 的形变
             # X_deformed = self.updateDeformedPointPos(featureVec, tIdx) # ul may be 0,1,-1 # 轮廓点对应原始点云进行Shape subspace变形操作
@@ -820,22 +819,19 @@ class EMOpt5Views(object):
         
         if stage >= 2: # 考虑每颗牙齿的相对位姿和尺寸
             rotMats = self.computeRotMats(rotVecXYZs)
-            _X_trans_pred = [s*np.matmul(x-tc,R)+t+tc for x,s,R,t,tc in zip(X_deformed_pred, scales, rotMats, transVecXYZs, self.X_Mu_centroids[tIdx])] # 轮廓点对应原始点云按牙齿分别进行缩放刚性变换
-            _X_trans_pred_normals = [np.matmul(xn,R) for xn,R in zip(X_deformed_pred_normals, rotMats)]
+            X_trans_pred = [s*np.matmul(x-tc,R)+t+tc for x,s,R,t,tc in zip(X_deformed_pred, scales, rotMats, transVecXYZs, self.X_Mu_centroids[tIdx])] # 轮廓点对应原始点云按牙齿分别进行缩放刚性变换
+            X_trans_pred_normals = [np.matmul(xn,R) for xn,R in zip(X_deformed_pred_normals, rotMats)]
             
         
         # 需要考虑上下牙列位置关系，对下牙列的点进行相对旋转和平移
-        X_trans_pred = deepcopy(_X_trans_pred)
-        X_trans_pred_normals = deepcopy(_X_trans_pred_normals)
         if photoType in [PHOTO.LEFT, PHOTO.RIGHT, PHOTO.FRONTAL]:
             ul_sp = self.ul_sp[ph]
             X_trans_pred = X_trans_pred[:ul_sp] + [x@rela_R+rela_txyz for x in X_trans_pred[ul_sp:]]
             X_trans_pred_normals = X_trans_pred_normals[:ul_sp] + [xn@rela_R for xn in X_trans_pred_normals[ul_sp:]]
         
-        _X_corre_pred = np.vstack(X_trans_pred)[self.corre_pred_idx[ph]]
-        X_corre_pred = _X_corre_pred.copy()            
+        X_corre_pred = np.vstack(X_trans_pred)[self.corre_pred_idx[ph]]           
         if stage == 1: # 在优化相机参数同时，优化牙列的Anistropic scales
-            X_corre_pred = np.hstack([rowScaleXZ[0],1.,rowScaleXZ[1]]) * _X_corre_pred
+            X_corre_pred = np.hstack([rowScaleXZ[0],1.,rowScaleXZ[1]]) * X_corre_pred
         X_corre_pred_normals = np.vstack(X_trans_pred_normals)[self.corre_pred_idx[ph]]
 
         X_cam_corre_pred = self.updatePointPosInCameraCoord(X_corre_pred, extrViewMat) #相机坐标系下对应点坐标
@@ -845,85 +841,10 @@ class EMOpt5Views(object):
         P_corre_pred_normals = self.updatePointNormalsInImageCoord(X_cam_corre_pred_normals)
         
         errorVecUV = self.P_true_99_percentile[ph] - P_corre_pred # ci - \hat{ci}
-        _M = len(self.P_true_99_percentile[ph])
         resPointError = np.sum(np.linalg.norm(errorVecUV, axis=1)**2) / self.varPoint
         resPlaneError = np.sum(np.sum(errorVecUV*P_corre_pred_normals, axis=1)**2) / self.varPlane
-        # print("resPointError:{:.4f}, resPlaneError:{:.4f}".format(resPointError/_M, resPlaneError/_M))
-        loss = (resPointError + resPlaneError) / _M
-        if not return_grad:
-            return loss, None
+        return (resPointError + resPlaneError) / self.M[ph]
         
-        # 计算loss关于hat_ci和hat_ni梯度
-        
-        ci_hatci = errorVecUV # shape=(_M, 2)
-        hatni = P_corre_pred_normals # shape=(_M, 2)
-        ci_hatci_dot_hatni = np.sum(ci_hatci*hatni, axis=1)
-        par_loss_par_hatci = -2./ _M * np.matmul(ci_hatci[:,None,:], \
-            (1./self.varPoint * np.identity(2,np.float32) + 1./self.varPlane * np.matmul(hatni[:,:,None],hatni[:,None,:]))) #(_M, 1, 2)
-        par_loss_par_hatni = 2./(self.varPlane*_M) * ci_hatci_dot_hatni[:,None,None] * ci_hatci.reshape(_M,1,2)  #(_M, 1, 2)
-
-        g = X_cam_corre_pred # 3d-point after global transformation (_M,3)
-        gn = X_cam_corre_pred_normals
-        gz = g[:,[2]]
-        gxgy_gz = g[:,:2] / gz # (_M,2)
-        par_hatci_par_fx = 1./self.dpix[ph] * gxgy_gz[...,None] # (_M,2,1)
-        par_hatci_par_u0 = np.array([[1.],[0.]],np.float32)
-        par_hatci_par_v0 = np.array([[0.],[1.]],np.float32)
-
-        # 对于相机内参的梯度
-        grad_fx = np.sum(np.matmul(par_loss_par_hatci, par_hatci_par_fx))
-        grad_dpix = 0
-        grad_u0 = np.sum(np.matmul(par_loss_par_hatci, par_hatci_par_u0))
-        grad_v0 = np.sum(np.matmul(par_loss_par_hatci, par_hatci_par_v0))
-
-        fx = intrProjMat[0,0]
-        par_hatci_par_g = fx/gz[:,:,None] * np.concatenate([np.tile(np.identity(2,np.float32),(_M,1,1)), -gxgy_gz[...,None]],axis=-1) # (_M,2,3)
-        par_loss_par_g = np.matmul(par_loss_par_hatci, par_hatci_par_g) # (_M,1,3)
-        # par_g_par_ext = np.identity(3,np.float32) 
-        par_g_par_exr = -self.skewMatrices(g)
-
-        # 对于ex_txyz, ex_rxyz的梯度
-        grad_ext = np.sum(par_loss_par_g, axis=0) # (1,3)
-        par_hatni_par_gn = self.jacobs_hatni_wrt_gn(gn) # (_M,2,3)
-        par_loss_par_gn = np.matmul(par_loss_par_hatni, par_hatni_par_gn)  # (_M,1,3)
-        par_gn_par_exr = -self.skewMatrices(gn)
-        grad_exr = np.sum(np.matmul(par_loss_par_g, par_g_par_exr), axis=0) + \
-             np.sum(np.matmul(par_loss_par_gn, par_gn_par_exr), axis=0) # (1,3)
-
-        R_global = extrViewMat[:3,:].T
-        # 对于牙列各向异性放缩的梯度
-        p = _X_corre_pred # 牙列放缩前的世界坐标系中的坐标
-        grad_rowScaleXZ = np.zeros((1,2),np.float32)
-        if stage == 1:
-            par_g_par_rowScaleXZ = np.matmul(R_global, self.diagMatrices(p)[...,[0,2]]) # (_M,3,2)
-            grad_rowScaleXZ = np.sum(np.matmul(par_loss_par_g, par_g_par_rowScaleXZ), axis=0) # (1,2)
-
-
-        # 计算牙列相对位置关系参数的梯度
-        rowScaleMat = np.diag([rowScaleXZ[0],1.,rowScaleXZ[1]])
-        grad_relar = np.zeros((1,3),np.float32)
-        grad_relat = np.zeros((1,3),np.float32)
-        if photoType in [PHOTO.LEFT, PHOTO.RIGHT, PHOTO.FRONTAL]:
-            ul_sp = self.ul_sp[ph]
-            ks = np.sum([len(x) for x in _X_trans_pred[:ul_sp]]).astype(np.int32)
-            idx_l = self.corre_pred_idx[ph] >= ks # corre_pred_idx中属于下牙列的点的mask
-            
-            pl = _X_corre_pred[idx_l]   # 下牙列经过相对旋转位移后未经过牙列缩放的点坐标
-            pln = X_corre_pred_normals[idx_l]
-            par_loss_par_gl = par_loss_par_g[idx_l]
-            par_loss_par_gln = par_loss_par_gn[idx_l]
-            par_gl_par_relar = np.matmul(R_global@rowScaleMat, -self.skewMatrices(pl))
-            par_gln_par_relar = np.matmul(R_global, -self.skewMatrices(pln))
-            par_gl_par_relat = R_global
-            grad_relar = np.sum(np.matmul(par_loss_par_gl, par_gl_par_relar), axis=0) + np.sum(np.matmul(par_loss_par_gln, par_gln_par_relar), axis=0) # (1,3)
-            grad_relat = np.sum(np.matmul(par_loss_par_gl, par_gl_par_relat), axis=0) # (1,3)
-
-        _Regularizer = 1.
-        grad = np.hstack([_Regularizer*np.squeeze(grad_exr), np.squeeze(grad_ext), grad_fx, grad_dpix, grad_u0, grad_v0, _Regularizer*np.squeeze(grad_relar), np.squeeze(grad_relat)])
-        if stage == 1:
-            grad = np.hstack([grad, np.squeeze(grad_rowScaleXZ)])
-        
-        return loss, grad
 
     @staticmethod
     def skewMatrices(a):
@@ -933,13 +854,6 @@ class EMOpt5Views(object):
         vec_a1, vec_a2, vec_a3 = np.split(a, 3, axis=-1)
         return np.stack([vec_0, -vec_a3, vec_a2, vec_a3, vec_0, -vec_a1, -vec_a2, vec_a1, vec_0], axis=-1).reshape((n,3,3))
 
-    @staticmethod
-    def diagMatrices(a):
-        # a: 2d-array, shape=(?,3)
-        n, _ = a.shape
-        vec_0 = np.zeros((n,1),np.float32)
-        vec_a1, vec_a2, vec_a3 = np.split(a, 3, axis=-1)
-        return np.stack([vec_a1, vec_0, vec_0, vec_0, vec_a2, vec_0, vec_0, vec_0, vec_a3], axis=-1).reshape((n,3,3))
 
     @staticmethod
     def jacobs_hatni_wrt_gn(vec_gn):
@@ -1025,7 +939,7 @@ class EMOpt5Views(object):
     
 
 
-    def MStepLoss(self, params, pIdx, stage, step, verbose, return_grad=False):
+    def MStepLoss(self, params, pIdx, stage, step, verbose):
         ex_rxyz, ex_txyz, focLth, dpix, u0, v0, rela_rxyz, rela_txyz = self.parseGlobalParamsOf5Views(params, pIdx)
         rowScaleXZ = np.ones((2,))
         transVecXYZs, rotVecXYZs, scales = self.parseTeethPoseParams(params, pIdx, step)
@@ -1047,18 +961,12 @@ class EMOpt5Views(object):
             featureVec = params[pIdx["featureVec"]:pIdx["featureVec"]+self.numTooth*self.numPC].reshape(self.featureVec.shape)
 
         errors = np.zeros((5,))
-        paramNum = len(params)
-        M_grad = np.zeros((paramNum,))
-        if return_grad == True and stage == 1:
-            gradRowScaleXZ = 2.*self.weightAniScale / (3.*self.scaleStd**2) * np.prod(rowScaleXZ)**(-1/3) * np.array([rowScaleXZ[1],rowScaleXZ[0]])
-            M_grad[pIdx["rowScaleXZ"]:pIdx["rowScaleXZ"]+2] += np.sum(self.weightViews)*gradRowScaleXZ
-        
         for phType in self.photoTypes:
             ph = phType.value
             tIdx = self.visIdx[ph]
             intrProjMat = self.updateIntrinsicProjectionMatrix(focLth[ph], dpix[ph], u0[ph], v0[ph])
-            pixelError, pixelGrad = self.computePixelResidualError(phType, featureVec[tIdx], scales[tIdx], rotVecXYZs[tIdx], transVecXYZs[tIdx],\
-                extrViewMats[ph], intrProjMat, rela_R, rela_txyz, rowScaleXZ, stage, return_grad)
+            pixelError = self.computePixelResidualError(phType, featureVec[tIdx], scales[tIdx], rotVecXYZs[tIdx], transVecXYZs[tIdx],\
+                extrViewMats[ph], intrProjMat, rela_R, rela_txyz, rowScaleXZ, stage)
             teethPoseError = 0.
             featureVecError = 0.
             if stage == 2:
@@ -1069,74 +977,14 @@ class EMOpt5Views(object):
                 print("{}, pixelError:{:.2f}, teethPoseError:{:.2f}, featureVecError: {:.2f}".format(\
                     str(phType), pixelError, teethPoseError, featureVecError))
             errors[ph] = self.weightViews[ph] * (pixelError + teethPoseError + aniScaleError + featureVecError)
-            if return_grad == True:
-                M_grad = self.__updateMStepGradVector(M_grad, pIdx, self.weightViews[ph]*pixelGrad, ph, stage)
-                # print("gradient of {}".format(str(phType)), self.weightViews[ph]*pixelGrad)
-                # print("ex_rxyz: ", ex_rxyz)
-                # print("ex_txyz: ", ex_txyz)
-                # print("rela_rxyz: ", rela_rxyz)
-                # print("rela_txyz: ", rela_txyz)
-                # print("focal length: ", focLth)
-                # print("d_pixel: ", dpix)
-                # print("u0: {}, v0: {}".format(u0, v0))
 
         M_loss = np.sum(errors)
         if verbose==True:
             print("maximization step errors: [{:.2f},{:.2f},{:.2f},{:.2f},{:.2f}]".format(*errors))
-        if not return_grad:
-            return M_loss
-        return M_loss, M_grad
-
-    def __updateMStepGradVector(self, aggGrad, pIdx, phGrad, ph, stage):
-        grad_exr = phGrad[0:3]
-        grad_ext = phGrad[3:6]
-        grad_fx, grad_dpix, grad_u0, grad_v0 = phGrad[6:10]
-        grad_relar = phGrad[10:13]
-        grad_relat = phGrad[13:16]
-
-        ex_rxyz_ks = pIdx["ex_rxyz"] + 3*ph
-        ex_txyz_ks = pIdx["ex_txyz"] + 3*ph
-        ex_focLth_ks = pIdx["focLth"] + ph
-        ex_dpix_ks = pIdx["dpix"] + ph
-        ex_u0_ks = pIdx["u0"] + ph
-        ex_v0_ks = pIdx["v0"] + ph
-        rela_rxyz_ks = pIdx["rela_rxyz"]
-        rela_txyz_ks = pIdx["rela_txyz"]
-
-        aggGrad[ex_rxyz_ks:ex_rxyz_ks+3] += grad_exr
-        aggGrad[ex_txyz_ks:ex_txyz_ks+3] += grad_ext
-        aggGrad[ex_focLth_ks] += grad_fx
-        aggGrad[ex_dpix_ks] += grad_dpix
-        aggGrad[ex_u0_ks] += grad_u0
-        aggGrad[ex_v0_ks] += grad_v0
-        aggGrad[rela_rxyz_ks:rela_rxyz_ks+3] += grad_relar
-        aggGrad[rela_txyz_ks:rela_txyz_ks+3] += grad_relat
-
-        if stage == 1:
-            rowScale_ks = pIdx["rowScaleXZ"]
-            grad_rowScaleXZ = phGrad[16:18]
-            aggGrad[rowScale_ks:rowScale_ks+2] += grad_rowScaleXZ
-        return aggGrad
+        return M_loss
 
 
-    def maximization_step_5Views(self, stage, step, rhobeg=0.1, maxiter=100, verbose=True):
-        if stage in [0,1]:
-            self.ex_rxyz_lr = 1.
-            self.ex_txyz_lr = 1.
-            self.focLth_lr = 1.
-            self.uv_lr = 1.
-            self.dpix_lr = 1.
-            self.rela_rxyz_lr = 1.
-            self.rela_txyz_lr = 1.
-        else:
-            self.ex_rxyz_lr = 1.
-            self.ex_txyz_lr = 1.
-            self.focLth_lr = 1.
-            self.uv_lr = 1.
-            self.dpix_lr = 1.
-            self.rela_rxyz_lr = 0.001
-            self.rela_txyz_lr = 0.1
-        
+    def maximization_step_5Views(self, stage, step, rhobeg=0.1, maxiter=1000, verbose=True):
         x0, pIdx = self.getCurrentGlobalParamsOf5Views_as_x0(stage, step)
         if stage == 2:
             if step == 1:
@@ -1150,36 +998,9 @@ class EMOpt5Views(object):
         elif stage == 3:
             for phType in self.photoTypes:
                 self.SigmaT_segs[phType.value] = self.updateCorreSigmaTSegs(phType)
-
-        if stage in [0,1]: # return gradient
-            ex_rxyz_d = 0.2
-            ex_txyz_d = 20.
-            ex_rxyz_params = x0[pIdx["ex_rxyz"]:pIdx["ex_rxyz"]+15]
-            ex_txyz_params = x0[pIdx["ex_txyz"]:pIdx["ex_txyz"]+15]
-            rela_rxyz_d = 0.05
-            rela_txyz_d = 1.
-            rela_rxyz_params = x0[pIdx["rela_rxyz"]:pIdx["rela_rxyz"]+3]
-            rela_txyz_params = x0[pIdx["rela_txyz"]:pIdx["rela_txyz"]+3]
-            
-            ex_rxyz_bounds = np.stack([ex_rxyz_params-ex_rxyz_d, ex_rxyz_params+ex_rxyz_d])
-            ex_rxyz_bounds = list(zip(ex_rxyz_bounds[0], ex_rxyz_bounds[1])) # list of tuples
-            ex_txyz_bounds = np.stack([ex_txyz_params-ex_txyz_d, ex_txyz_params+ex_txyz_d])
-            ex_txyz_bounds = list(zip(ex_txyz_bounds[0], ex_txyz_bounds[1])) # list of tuples
-            intr_bounds = [(None,None)] * 20
-            rela_rxyz_bounds = np.stack([rela_rxyz_params-rela_rxyz_d, rela_rxyz_params+rela_rxyz_d])
-            rela_rxyz_bounds = list(zip(rela_rxyz_bounds[0], rela_rxyz_bounds[1])) # list of tuples
-            rela_txyz_bounds = np.stack([rela_txyz_params-rela_txyz_d, rela_txyz_params+rela_txyz_d])
-            rela_txyz_bounds = list(zip(rela_txyz_bounds[0], rela_txyz_bounds[1])) # list of tuples
-            bounds = ex_rxyz_bounds + ex_txyz_bounds + intr_bounds + rela_rxyz_bounds + rela_txyz_bounds
-            if stage == 1:
-                bounds = bounds + [(0.2,1.8)] * 2
-
-            optRes = scipy.optimize.minimize(fun=self.MStepLoss, x0=x0, jac=True, bounds=bounds, args=(pIdx, stage, step, False, True), \
-                method="SLSQP", tol=1e-6, options={"ftol":1e-6,"maxiter":maxiter,"disp":False})
-
-        else: # do not return gradient
-            optRes = scipy.optimize.minimize(fun=self.MStepLoss, x0=x0, args=(pIdx, stage, step, False, False), \
-                method="COBYLA", tol=1e-6, options={"rhobeg":rhobeg,"maxiter":maxiter})
+    
+        optRes = scipy.optimize.minimize(fun=self.MStepLoss, x0=x0, args=(pIdx, stage, step, False), \
+            method="COBYLA", tol=1e-6, options={"rhobeg":rhobeg,"maxiter":maxiter})
         params = optRes.x
 
         self.ex_rxyz, self.ex_txyz, self.focLth, self.dpix, self.u0, self.v0, self.rela_rxyz, self.rela_txyz =\
@@ -1190,7 +1011,7 @@ class EMOpt5Views(object):
             self.transVecXYZs, self.rotVecXYZs, self.scales = self.parseTeethPoseParams(params, pIdx, step)
         elif stage == 3:
             self.featureVec = params[pIdx["featureVec"]:pIdx["featureVec"]+self.numTooth*self.numPC].reshape(self.featureVec.shape)
-        self.loss_maximization_step = self.MStepLoss(params, pIdx, stage, step, verbose, return_grad=False)
+        self.loss_maximization_step = self.MStepLoss(params, pIdx, stage, step, verbose)
 
 
     ###########################################

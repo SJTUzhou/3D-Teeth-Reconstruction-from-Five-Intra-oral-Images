@@ -67,7 +67,7 @@ Fold1_TagIDs = [66,62,44,2,38,78,4,67,11,85,50,51,79,57,33,77,94,23,21]
 Fold2_TagIDs = [64,89,6,58,31,86,3,27,35,45,26,36,8,76,55,17,22,82,48]
 Fold3_TagIDs = [9,87,88,80,61,30,41,34,74,25,13,0,16,20,15,19,93,59,49]
 Fold4_TagIDs = [73,32,69,5,40,72,43,75,1,28,7,92,91,37,68,60,81,14,52]
-Fold5_TagIDs = [63] # [63,47,24,54,10,42,18,90,70,46,71,83,84,56,65,53,39,29,12]
+Fold5_TagIDs = [63,47,24,54,10,42,18,90,70,46,71,83,84,56,65,53,39,29,12]
 
 TagIDs = Fold5_TagIDs + Fold4_TagIDs + Fold3_TagIDs + Fold2_TagIDs + Fold1_TagIDs
 
@@ -212,19 +212,11 @@ def run_emopt(TagID, phase):
         print("Root Mean Squared Surface Distance(mm): {:.4f}".format(computeRMSE(emopt.X_trans, X_Ref)))
 
         stage = 0
-        maxiter = 30
+        maxFuncEval = 500
         E_loss = []
-        for it in range(5):
-            # emopt.maximization_step_5Views_by_Matlab(MATLAB_PATH, ENGINE, stage, maxFuncEval)
-            emopt.maximization_step_5Views(stage, step=-1, rhobeg=None, maxiter=maxiter, verbose=False)
-            # print("ex_rxyz: ", emopt.ex_rxyz)
-            # print("ex_txyz: ", emopt.ex_txyz)
-            # print("rela_rxyz: ", emopt.rela_rxyz)
-            # print("rela_txyz: ", emopt.rela_txyz)
-            # print("focal length: ", emopt.focLth)
-            # print("d_pixel: ", emopt.dpix)
-            # print("u0: {}, v0: {}".format(emopt.u0, emopt.v0))
-
+        for it in range(15):
+            emopt.maximization_step_5Views_by_Matlab(MATLAB_PATH, ENGINE, stage, maxFuncEval)
+            # emopt.maximization_step_5Views(stage, step=-1, rhobeg=1.0, maxiter=maxFuncEval, verbose=False)
             print("M-step loss: {:.4f}".format(emopt.loss_maximization_step))
             emopt.expectation_step_5Views(verbose=True)
             e_loss = np.sum(emopt.weightViews * emopt.loss_expectation_step)
@@ -245,11 +237,10 @@ def run_emopt(TagID, phase):
         print("Start Stage 1.")
 
         stage = 1
-        maxiter = 30
+        maxFuncEval = 800
         for it in range(5):
-            # emopt.maximization_step_5Views_by_Matlab(MATLAB_PATH, ENGINE, stage, maxFuncEval)    
-            emopt.maximization_step_5Views(stage, step=-1, rhobeg=None, maxiter=maxiter, verbose=False)
-
+            emopt.maximization_step_5Views_by_Matlab(MATLAB_PATH, ENGINE, stage, maxFuncEval)    
+            # emopt.maximization_step_5Views(stage, step=-1, rhobeg=1.0, maxiter=maxFuncEval, verbose=False)
             print("M-step loss: {:.4f}".format(emopt.loss_maximization_step))
             emopt.expectation_step_5Views(verbose=True)
             e_loss = np.sum(emopt.weightViews * emopt.loss_expectation_step)
@@ -464,8 +455,6 @@ def main(phase):
     for TagID in TagID_Folds[FOLD_IDX]:
         LogFile = os.path.join(LOG_DIR, "TagID-{}.log".format(TagID))
         # Log file
-        if os.path.exists(LogFile):
-            os.remove(LogFile)
         log = open(LogFile, "a", encoding='utf-8')
         sys.stdout = log
 
@@ -490,9 +479,9 @@ if __name__ == "__main__":
         ray.init(num_cpus=NUM_CPUS, num_gpus=1) #ray(多线程)初始化
         ENGINE = matlab.engine.connect_matlab()
         ENGINE.addpath(MATLAB_PATH)
-        for FOLD_IDX in [5,]: #[5,4,3,2,1]:
+        for FOLD_IDX in [5,4,3,2,1]:
             EDGE_MASK_PATH = r"./dataWithPhoto/learning/fold{}/test/pred-{}/".format(FOLD_IDX, VERSION)
-            # main(phase=0)
+            main(phase=0)
             main(phase=1)
 
         # # create demo triangle meshes
