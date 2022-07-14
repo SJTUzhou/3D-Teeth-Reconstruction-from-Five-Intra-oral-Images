@@ -11,7 +11,7 @@ import utils
 from utils import computeRMSE, computeRMSD, computeASSD, computeHD
 import projection_utils as proj
 import functools
-# import matlab.engine
+import matlab.engine
 import ray
 import psutil
 from projection_utils import PHOTO
@@ -67,7 +67,7 @@ Fold1_TagIDs = [66,62,44,2,38,78,4,67,11,85,50,51,79,57,33,77,94,23,21]
 Fold2_TagIDs = [64,89,6,58,31,86,3,27,35,45,26,36,8,76,55,17,22,82,48]
 Fold3_TagIDs = [9,87,88,80,61,30,41,34,74,25,13,0,16,20,15,19,93,59,49]
 Fold4_TagIDs = [73,32,69,5,40,72,43,75,1,28,7,92,91,37,68,60,81,14,52]
-Fold5_TagIDs = [47,] # [63,47,24,54,10,42,18,90,70,46,71,83,84,56,65,53,39,29,12]
+Fold5_TagIDs = [63] # [63,47,24,54,10,42,18,90,70,46,71,83,84,56,65,53,39,29,12]
 
 TagIDs = Fold5_TagIDs + Fold4_TagIDs + Fold3_TagIDs + Fold2_TagIDs + Fold1_TagIDs
 
@@ -116,7 +116,8 @@ def meanShapeAlignmentEvaluation(with_scale=False):
 
 def run_emopt(TagID, phase):
     # phase 0: grid search parallelled by Ray
-    # phase 1: stage 0,1,2,3 optimization by scipy
+    # phase 1: stage 0 & 1 optimization by Matlab
+    # phase 2: stage 2 optimization by scipy
 
     print("TagID: ", TagID)
 
@@ -153,9 +154,11 @@ def run_emopt(TagID, phase):
     VISIBLE_MASKS = [proj.MASK_UPPER, proj.MASK_LOWER, proj.MASK_LEFT, proj.MASK_RIGHT, proj.MASK_FRONTAL]
     emopt = EMOpt5Views(edgeMasks, photoTypes, VISIBLE_MASKS, Mask, Mu, SqrtEigVals, Sigma, PoseCovMats, ScaleCovMat, transVecStds.mean(), rotVecStds.mean())
 
+    E_step_result_file = os.path.join(MATLAB_PATH, "E-step-result.mat")
+    M_step_result_file = os.path.join(MATLAB_PATH, "M-step-result.mat")
     stage0initMatFile = os.path.join(STAGE0_MAT_DIR, "E-step-result-stage0-init-{}.mat".format(TagID))
     stage0finalMatFile = os.path.join(STAGE0_MAT_DIR, "TEMP-E-step-result-stage0-final.mat")
-    # stage2initMatFile = os.path.join(STAGE0_MAT_DIR, "E-step-result-stage2-init-{}.mat".format(TagID))
+    stage2initMatFile = os.path.join(STAGE0_MAT_DIR, "E-step-result-stage2-init-{}.mat".format(TagID))
 
     # phase 0: grid search parallelled by Ray
     if phase == 0:
@@ -201,15 +204,26 @@ def run_emopt(TagID, phase):
 
         # Continue from checkpoint "E-step-result-stage0-init-{}.mat"
         stage = 0
+        ENGINE.addpath(MATLAB_PATH)
+        ENGINE.run_MStep(stage, 500, stage0initMatFile, M_step_result_file, nargout=0)
+        emopt.load_maximization_step_result(M_step_result_file, stage)
         emopt.load_expectation_step_result(stage0initMatFile, stage)
         emopt.expectation_step_5Views(verbose=True)
         print("Root Mean Squared Surface Distance(mm): {:.4f}".format(computeRMSE(emopt.X_trans, X_Ref)))
 
         stage = 0
-        maxiter = 50
+        maxiter = 30
         E_loss = []
-        for it in range(10):
+        for it in range(5):
+            # emopt.maximization_step_5Views_by_Matlab(MATLAB_PATH, ENGINE, stage, maxFuncEval)
             emopt.maximization_step_5Views(stage, step=-1, rhobeg=None, maxiter=maxiter, verbose=False)
+            # print("ex_rxyz: ", emopt.ex_rxyz)
+            # print("ex_txyz: ", emopt.ex_txyz)
+            # print("rela_rxyz: ", emopt.rela_rxyz)
+            # print("rela_txyz: ", emopt.rela_txyz)
+            # print("focal length: ", emopt.focLth)
+            # print("d_pixel: ", emopt.dpix)
+            # print("u0: {}, v0: {}".format(emopt.u0, emopt.v0))
 
             print("M-step loss: {:.4f}".format(emopt.loss_maximization_step))
             emopt.expectation_step_5Views(verbose=True)
@@ -231,7 +245,9 @@ def run_emopt(TagID, phase):
         print("Start Stage 1.")
 
         stage = 1
-        for it in range(5): 
+        maxiter = 30
+        for it in range(5):
+            # emopt.maximization_step_5Views_by_Matlab(MATLAB_PATH, ENGINE, stage, maxFuncEval)    
             emopt.maximization_step_5Views(stage, step=-1, rhobeg=None, maxiter=maxiter, verbose=False)
 
             print("M-step loss: {:.4f}".format(emopt.loss_maximization_step))
@@ -256,32 +272,38 @@ def run_emopt(TagID, phase):
         if skipStage1Flag == True:
             print("Skip Stage 1; Reverse to Stage 0 final result.")
             emopt.rowScaleXZ = np.ones((2,))
-            emopt.load_expectation_step_result(stage0finalMatFile, stage=2)
+            ENGINE.run_MStep(0, 500, stage0finalMatFile, M_step_result_file, nargout=0)
+            emopt.load_maximization_step_result(M_step_result_file, 2)
+            # emopt.load_expectation_step_result(stage0finalMatFile, stage=2)
             emopt.expectation_step_5Views(verbose=True)
         else:
             print("Accept Stage 1.")
             emopt.anistropicRowScale2ScalesAndTransVecs()      
         print("iteration: {}, real Root Mean Squared Surface Distance(mm): {:.4f}".format(it, computeRMSE(emopt.X_trans, X_Ref)))
 
-        # # 保存用于phase2的初始变量
-        # emopt.save_expectation_step_result_with_XRef(stage2initMatFile, X_Ref)
-
+        # 保存用于phase2的初始变量
+        emopt.save_expectation_step_result_with_XRef(stage2initMatFile, X_Ref)
+    
+    
+    
+    
+    elif phase == 2:  # phase 2: stage 2 optimization by scipy
         # Stage = 2
         print("-"*100)
         print("Start Stage 2.")
         stage = 2
 
-        # # load previous data
-        # emopt.load_expectation_step_result(stage2initMatFile, stage)
+        # load previous data
+        emopt.load_expectation_step_result(stage2initMatFile, stage)
         emopt.expectation_step_5Views(verbose=True)
 
         
         E_loss = []
-        for it in range(5):
-            emopt.maximization_step_5Views(stage, step=2, maxiter=maxiter, verbose=False)
-            emopt.maximization_step_5Views(stage, step=3, maxiter=maxiter, verbose=False)
+        for it in range(10):
+            emopt.maximization_step_5Views(stage, step=2, rhobeg=0.1, maxiter=1000, verbose=False)
+            emopt.maximization_step_5Views(stage, step=3, rhobeg=0.1, maxiter=1000, verbose=False)
             emopt.maximization_step_5Views(stage=3, step=-1, rhobeg=0.1, maxiter=1000, verbose=False)
-            emopt.maximization_step_5Views(stage, step=1, maxiter=maxiter, verbose=False)
+            emopt.maximization_step_5Views(stage, step=1, rhobeg=0.1, maxiter=1000, verbose=False)
             print("M-step loss: {:.4f}".format(emopt.loss_maximization_step))
             emopt.expectation_step_5Views(verbose=True)
             e_loss = np.sum(emopt.weightViews * emopt.loss_expectation_step)
@@ -319,6 +341,10 @@ def run_emopt(TagID, phase):
 
         demoH5File = os.path.join(DEMO_H5_DIR, "demo_TagID={}.h5".format(TagID))
         emopt.saveDemo2H5(demoH5File, TagID, X_Ref)
+
+
+
+
 
 
 
@@ -444,7 +470,7 @@ def main(phase):
         sys.stdout = log
 
         run_emopt(TagID, phase)
-        if phase == 1:
+        if phase == 2:
             evaluation(TagID)
 
         log.close()
@@ -453,20 +479,21 @@ def main(phase):
 if __name__ == "__main__":
     
     if len(sys.argv) > 1:
-        # phase 1 & 2
+        # phase 2
         FOLD_IDX = int(sys.argv[1]) # command line argument: Fold_Index
         EDGE_MASK_PATH = r"./dataWithPhoto/learning/fold{}/test/pred-{}/".format(FOLD_IDX, VERSION)
-        # ENGINE = None
-        main(phase=1)
-
+        ENGINE = None
+        main(phase=2)
     else:
-        # phase 0
+        # phase 0 & 1
         NUM_CPUS = psutil.cpu_count(logical=False)
         ray.init(num_cpus=NUM_CPUS, num_gpus=1) #ray(多线程)初始化
+        ENGINE = matlab.engine.connect_matlab()
+        ENGINE.addpath(MATLAB_PATH)
         for FOLD_IDX in [5,]: #[5,4,3,2,1]:
             EDGE_MASK_PATH = r"./dataWithPhoto/learning/fold{}/test/pred-{}/".format(FOLD_IDX, VERSION)
-            main(phase=0)
-            
+            # main(phase=0)
+            main(phase=1)
 
         # # create demo triangle meshes
         # NUM_CPUS = psutil.cpu_count(logical=False) 
