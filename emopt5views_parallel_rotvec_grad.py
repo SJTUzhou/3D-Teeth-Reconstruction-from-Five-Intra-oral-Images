@@ -1260,7 +1260,7 @@ class EMOpt5Views(object):
         """Get bounds of params"""
         bounds = []
         ex_rxyz_d = 0.3
-        ex_txyz_d = 30.
+        ex_txyz_d = 20.
         ex_rxyz_params = x0[pIdx["ex_rxyz"]:pIdx["ex_rxyz"]+15]
         ex_txyz_params = x0[pIdx["ex_txyz"]:pIdx["ex_txyz"]+15]
         rela_rxyz_d = 0.05
