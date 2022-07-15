@@ -11,11 +11,10 @@ import utils
 from utils import computeRMSE, computeRMSD, computeASSD, computeHD
 import projection_utils as proj
 import functools
-# import matlab.engine
 import ray
 import psutil
 from projection_utils import PHOTO
-from emopt5views_matlab_parallel_rotvec import EMOpt5Views
+from emopt5views_parallel_rotvec import EMOpt5Views
 
 
  
@@ -67,7 +66,7 @@ Fold1_TagIDs = [66,62,44,2,38,78,4,67,11,85,50,51,79,57,33,77,94,23,21]
 Fold2_TagIDs = [64,89,6,58,31,86,3,27,35,45,26,36,8,76,55,17,22,82,48]
 Fold3_TagIDs = [9,87,88,80,61,30,41,34,74,25,13,0,16,20,15,19,93,59,49]
 Fold4_TagIDs = [73,32,69,5,40,72,43,75,1,28,7,92,91,37,68,60,81,14,52]
-Fold5_TagIDs = [47,] # [63,47,24,54,10,42,18,90,70,46,71,83,84,56,65,53,39,29,12]
+Fold5_TagIDs = [63,47,24,54,10,42,18,90,70,46,71,83,84,56,65,53,39,29,12]
 
 TagIDs = Fold5_TagIDs + Fold4_TagIDs + Fold3_TagIDs + Fold2_TagIDs + Fold1_TagIDs
 
@@ -196,20 +195,21 @@ def run_emopt(TagID, phase):
 
 
     elif phase == 1: # phase 1: stage 0 & 1 optimization by Matlab
+        
+
+        maxiter = 20
+        stageIter = [10,5,5]
+        
         print("-"*100)
         print("Start Stage 0.")
-
         # Continue from checkpoint "E-step-result-stage0-init-{}.mat"
         stage = 0
         emopt.load_expectation_step_result(stage0initMatFile, stage)
         emopt.expectation_step_5Views(verbose=True)
-        print("Root Mean Squared Surface Distance(mm): {:.4f}".format(computeRMSE(emopt.X_trans, X_Ref)))
-
-        stage = 0
-        maxiter = 50
+        print("Root Mean Squared Surface Distance(mm): {:.4f}".format(computeRMSE(emopt.X_trans, X_Ref)))        
         E_loss = []
-        for it in range(10):
-            emopt.maximization_step_5Views(stage, step=-1, rhobeg=None, maxiter=maxiter, verbose=False)
+        for it in range(stageIter[0]):
+            emopt.maximization_step_5Views(stage, step=-1, maxiter=maxiter, verbose=False)
 
             print("M-step loss: {:.4f}".format(emopt.loss_maximization_step))
             emopt.expectation_step_5Views(verbose=True)
@@ -231,8 +231,8 @@ def run_emopt(TagID, phase):
         print("Start Stage 1.")
 
         stage = 1
-        for it in range(5): 
-            emopt.maximization_step_5Views(stage, step=-1, rhobeg=None, maxiter=maxiter, verbose=False)
+        for it in range(stageIter[1]): 
+            emopt.maximization_step_5Views(stage, step=-1, maxiter=maxiter, verbose=False)
 
             print("M-step loss: {:.4f}".format(emopt.loss_maximization_step))
             emopt.expectation_step_5Views(verbose=True)
@@ -277,10 +277,10 @@ def run_emopt(TagID, phase):
 
         
         E_loss = []
-        for it in range(5):
+        for it in range(stageIter[2]):
             emopt.maximization_step_5Views(stage, step=2, maxiter=maxiter, verbose=False)
             emopt.maximization_step_5Views(stage, step=3, maxiter=maxiter, verbose=False)
-            emopt.maximization_step_5Views(stage=3, step=-1, rhobeg=0.1, maxiter=1000, verbose=False)
+            emopt.maximization_step_5Views(stage=3, step=-1, maxiter=maxiter, verbose=False)
             emopt.maximization_step_5Views(stage, step=1, maxiter=maxiter, verbose=False)
             print("M-step loss: {:.4f}".format(emopt.loss_maximization_step))
             emopt.expectation_step_5Views(verbose=True)
@@ -310,6 +310,8 @@ def run_emopt(TagID, phase):
         print((emopt.rotVecXYZs - emopt.meanRotVecXYZs) / np.sqrt(invRotVecXYZVars[Mask]))
         print("scales:")
         print(emopt.scales)
+        print("feature vectors:")
+        print(emopt.featureVec)
 
         # 不考虑第二磨牙
         withoutSecondMolarMask = np.tile(np.array([1,1,1,1,1,1,0],dtype=np.bool_),(4,))
@@ -456,14 +458,13 @@ if __name__ == "__main__":
         # phase 1 & 2
         FOLD_IDX = int(sys.argv[1]) # command line argument: Fold_Index
         EDGE_MASK_PATH = r"./dataWithPhoto/learning/fold{}/test/pred-{}/".format(FOLD_IDX, VERSION)
-        # ENGINE = None
         main(phase=1)
 
     else:
         # phase 0
         NUM_CPUS = psutil.cpu_count(logical=False)
         ray.init(num_cpus=NUM_CPUS, num_gpus=1) #ray(多线程)初始化
-        for FOLD_IDX in [5,]: #[5,4,3,2,1]:
+        for FOLD_IDX in [5,4,3,2,1]:
             EDGE_MASK_PATH = r"./dataWithPhoto/learning/fold{}/test/pred-{}/".format(FOLD_IDX, VERSION)
             main(phase=0)
             
