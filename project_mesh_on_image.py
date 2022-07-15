@@ -73,7 +73,8 @@ def generateProjectedMeshImg(tagID, visualizer, ulTeethMshes, phType, ex_rxyz, e
         lMsh.rotate(rela_R.T, center=(0,0,0))
         lMsh.translate(rela_t)
         msh = uMsh + lMsh # merge meshes
-    rotMat = RR.from_euler("xyz", ex_rxyz[ph]).as_matrix()
+    rotMat = RR.from_rotvec(ex_rxyz[ph]).as_matrix()
+    # rotMat = RR.from_euler("xyz", ex_rxyz[ph]).as_matrix()
     msh.rotate(rotMat, center=(0,0,0))
     msh.translate(ex_txyz[ph])
     visualizer.add_geometry(msh)
