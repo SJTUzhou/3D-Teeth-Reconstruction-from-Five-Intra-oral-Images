@@ -15,7 +15,7 @@ import matlab.engine
 import ray
 import psutil
 from projection_utils import PHOTO
-from emopt5views_parallel_rotvec import EMOpt5Views
+from emopt5views_matlab_parallel_rotvec import EMOpt5Views
 
 
  

@@ -14,7 +14,7 @@ import functools
 import ray
 import psutil
 from projection_utils import PHOTO
-from emopt5views_parallel_rotvec import EMOpt5Views
+from emopt5views_parallel_rotvec_grad import EMOpt5Views
 
 
  
@@ -199,7 +199,7 @@ def run_emopt(TagID, phase):
 
         maxiter = 20
         stageIter = [10,5,5]
-        
+
         print("-"*100)
         print("Start Stage 0.")
         # Continue from checkpoint "E-step-result-stage0-init-{}.mat"
