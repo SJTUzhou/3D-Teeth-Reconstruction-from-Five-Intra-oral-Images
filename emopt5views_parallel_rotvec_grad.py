@@ -1279,8 +1279,7 @@ class EMOpt5Views(object):
         v0_bounds = [(200., 400.)] * 5
         intr_bounds = focLth_bounds + dpix_bounds + u0_bounds + v0_bounds
 
-        rela_rxyz_bounds = np.stack([rela_rxyz_params-rela_rxyz_d, rela_rxyz_params+rela_rxyz_d])
-        rela_rxyz_bounds = list(zip(rela_rxyz_bounds[0], rela_rxyz_bounds[1])) # list of tuples
+        rela_rxyz_bounds = [(-rela_rxyz_d, rela_rxyz_d)] * 3
         rela_txyz_bounds = np.stack([rela_txyz_params-rela_txyz_d, rela_txyz_params+rela_txyz_d])
         rela_txyz_bounds = list(zip(rela_txyz_bounds[0], rela_txyz_bounds[1])) # list of tuples
         bounds = ex_rxyz_bounds + ex_txyz_bounds + intr_bounds + rela_rxyz_bounds + rela_txyz_bounds
@@ -1289,8 +1288,8 @@ class EMOpt5Views(object):
         elif stage == 2:
             numT = self.numTooth
             tXYZs_d = 10.*self.transVecStd
-            rXYZs_d = 4.*self.rotVecStd
-            scales_d = 4.*self.scaleStd
+            rXYZs_d = 5.*self.rotVecStd
+            scales_d = 5.*self.scaleStd
             if step == 1:
                 bounds += [(-tXYZs_d,tXYZs_d)] * (3*numT) # add bounds for tooth translation vecs
             elif step == 2:
