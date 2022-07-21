@@ -651,6 +651,9 @@ class EMOpt5Views(object):
         _corre_pred_idx = np.argmin(loss_mat, axis=1)
         losses = loss_mat[np.arange(self.M[ph]), _corre_pred_idx]
         if use_percentile == True:
+            # l1_point_loss_mat = distance_matrix(self.P_true[ph], self.P_pred[ph], p=1, threshold=int(1e8))
+            # l1_point_losses = l1_point_loss_mat[np.arange(self.M[ph]), _corre_pred_idx]
+            # self.flag_99_percentile[ph] = l1_point_losses < (2.5 * 1.4826 * np.median(l1_point_losses))
             # 99-percentile
             self.flag_99_percentile[ph] = losses < np.percentile(losses, 99.0)
             self.corre_pred_idx[ph] = _corre_pred_idx[self.flag_99_percentile[ph]] # mapping from [0,M] to [0,len(num_pred_point)]
