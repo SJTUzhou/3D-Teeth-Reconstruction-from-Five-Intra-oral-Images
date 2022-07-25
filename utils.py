@@ -400,7 +400,7 @@ def computeRMSE(X_pred, X_Ref):
     pointL2Errors = np.linalg.norm(X_pred - X_Ref, axis=2, ord=2)
     return np.mean(pointL2Errors)
 
-def computeRMSD(X_Pred, X_Ref):
+def computeRMSD(X_Pred, X_Ref, return_list=False):
     # 计算 Root Mean Squared symmetric surface Distance
     RMSDs = []
     for x_pred, x_ref in zip(X_Pred, X_Ref):
@@ -409,9 +409,11 @@ def computeRMSD(X_Pred, X_Ref):
         squared_sd2 = np.square(np.min(dist_mat, axis=1))
         rmsd = np.sqrt(np.mean(np.hstack([squared_sd1, squared_sd2])))
         RMSDs.append(rmsd)
+    if return_list == True:
+        return RMSDs
     return np.mean(RMSDs)
 
-def computeASSD(X_Pred, X_Ref):
+def computeASSD(X_Pred, X_Ref, return_list=False):
     # 计算 Average Symmetric Surface Distance
     ASSDs = []
     for x_pred, x_ref in zip(X_Pred, X_Ref):
@@ -420,9 +422,11 @@ def computeASSD(X_Pred, X_Ref):
         sd2 = np.min(dist_mat, axis=1)
         assd = np.mean(np.hstack([sd1, sd2]))
         ASSDs.append(assd)
+    if return_list == True:
+        return ASSDs
     return np.mean(ASSDs)
 
-def computeHD(X_Pred, X_Ref):
+def computeHD(X_Pred, X_Ref, return_list=False):
     # 计算 Hausdorff Distance(豪斯多夫距离)
     HDs = []
     for x_pred, x_ref in zip(X_Pred, X_Ref):
@@ -430,6 +434,8 @@ def computeHD(X_Pred, X_Ref):
         hd1 = np.max(np.min(dist_mat, axis=0))
         hd2 = np.max(np.min(dist_mat, axis=1))
         HDs.append(np.max([hd1,hd2]))
+    if return_list == True:
+        return HDs
     return np.mean(HDs)
 
 
