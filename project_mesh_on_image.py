@@ -27,7 +27,7 @@ NAME_IDX_MAP = pd.read_csv(NAME_IDX_MAP_CSV)
 PHOTO_ORDER = [PHOTO.UPPER, PHOTO.LOWER, PHOTO.LEFT, PHOTO.RIGHT, PHOTO.FRONTAL]
 PHOTO_TYPES = ["upperPhoto","lowerPhoto","leftPhoto","rightPhoto","frontalPhoto"]
 
-
+'''
 def proj_msh_on_img(img, o3dMsh, fx, fy, cx, cy):
     img_height, img_width = img.shape[:2]
     # Create a renderer with a set image width and height
@@ -57,6 +57,7 @@ def proj_msh_on_img(img, o3dMsh, fx, fy, cx, cy):
     img_o3d = render.render_to_image()
     # we can now save the rendered image right at this point 
     o3d.io.write_image("output.png", img_o3d, 9)
+'''
 
 
 
