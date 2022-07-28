@@ -161,6 +161,8 @@ def surfaceVertices2WatertightO3dMesh(vertices, showInWindow=False):
 
 def mergeO3dTriangleMeshes(o3dMeshes):
     """合并多个Triangle Meshes"""
+    if len(o3dMeshes) == 0:
+        return []
     newVStartIndex = 0
     aggVertices = []
     aggTriangles = []

@@ -1,30 +1,34 @@
+from re import M
 import open3d as o3d
 import os
 import copy
 import numpy as np
 import pandas as pd
+import h5py
 import open3d.visualization.rendering as rendering
 import open3d.visualization as visualization
 import skimage
 from scipy.spatial.transform import Rotation as RR
 import projection_utils as proj
-from projection_utils import PHOTO
+import utils
+from projection_utils import PHOTO, MASK_FRONTAL, MASK_LEFT, MASK_LOWER, MASK_RIGHT, MASK_UPPER
 
 
 
-H5_DIR = r"./dataWithPhoto/demo/"
-MESH_DIR = r"./dataWithPhoto/demoMesh/"
+H5_DIR = r"./dataWithPhoto/demo/Grad-99%conf-v21-PC=10/"
+MESH_DIR = r"./dataWithPhoto/demoMesh/Grad-99%conf-v21-PC=10/"
 PHOTO_DIR = r"./dataWithPhoto/normal_resized/"
 EDGE_DIR = r"./dataWithPhoto/normal_mask/"
 IMG_WIDTH = 800
 IMG_HEIGHT = 600
 WINDOW_WIDTH = 1600
 WINDOW_HEIGHT = 1200
-# OUTPUT_DIR = r"./dataWithPhoto/photoWithMeshProjected/"
-OUTPUT_DIR = r"./dataWithPhoto/photoWithMeshProjected/Edge/"
+OUTPUT_DIR = r"./dataWithPhoto/photoWithMeshProjected/"
+# OUTPUT_DIR = r"./dataWithPhoto/photoWithMeshProjected/Edge/"
 NAME_IDX_MAP_CSV = r"./dataWithPhoto/nameIndexMapping.csv"
 NAME_IDX_MAP = pd.read_csv(NAME_IDX_MAP_CSV)
 PHOTO_ORDER = [PHOTO.UPPER, PHOTO.LOWER, PHOTO.LEFT, PHOTO.RIGHT, PHOTO.FRONTAL]
+PHOTO_MASKS = [MASK_UPPER, MASK_LOWER, MASK_LEFT, MASK_RIGHT, MASK_FRONTAL]
 PHOTO_TYPES = ["upperPhoto","lowerPhoto","leftPhoto","rightPhoto","frontalPhoto"]
 
 '''
@@ -99,8 +103,6 @@ def generateProjectedMeshImg(tagID, visualizer, ulTeethMshes, phType, ex_rxyz, e
     # print(croppedImg.shape)
     return croppedImg
 
-
-
 def meshProjection(visualizer, tagID):
     demoH5File = os.path.join(H5_DIR, r"demo_TagID={}.h5".format(tagID))
     upperTeethObj = os.path.join(MESH_DIR, str(tagID), r"Pred_Upper_Mesh_TagID={}.obj".format(tagID))
@@ -108,15 +110,15 @@ def meshProjection(visualizer, tagID):
     ex_rxyz, ex_txyz, focLth, dpix, u0, v0, rela_R, rela_t = proj.readCameraParamsFromH5(h5File=demoH5File, patientId=tagID)
     fx = focLth / dpix
 
-    # photos = proj.getPhotos(PHOTO_DIR, NAME_IDX_MAP, tagID, PHOTO_TYPES, (IMG_HEIGHT, IMG_WIDTH))
-    photos = proj.getPhotos(EDGE_DIR, NAME_IDX_MAP, tagID, PHOTO_TYPES, (IMG_HEIGHT, IMG_WIDTH))
+    photos = proj.getPhotos(PHOTO_DIR, NAME_IDX_MAP, tagID, PHOTO_TYPES, (IMG_HEIGHT, IMG_WIDTH))
+    # photos = proj.getPhotos(EDGE_DIR, NAME_IDX_MAP, tagID, PHOTO_TYPES, (IMG_HEIGHT, IMG_WIDTH))
 
     upperTeethO3dMsh = o3d.io.read_triangle_mesh(upperTeethObj)
     upperTeethO3dMsh.paint_uniform_color([0.75, 0.75, 0.75])
     upperTeethO3dMsh.compute_vertex_normals()
 
     lowerTeethO3dMsh = o3d.io.read_triangle_mesh(lowerTeethObj)
-    lowerTeethO3dMsh.paint_uniform_color([0.8, 0.8, 0.8])
+    lowerTeethO3dMsh.paint_uniform_color([0.75, 0.75, 0.75])
     lowerTeethO3dMsh.compute_vertex_normals()
 
     for phType, img in zip(PHOTO_ORDER, photos):
@@ -131,16 +133,57 @@ def meshProjection(visualizer, tagID):
 
 
 
+def meshProjectionWithSelectedTeeth(visualizer, tagID):
+    demoH5File = os.path.join(H5_DIR, r"demo_TagID={}.h5".format(tagID))
+    with h5py.File(demoH5File, 'r') as f:
+        grp = f[str(tagID)]
+        X_Pred_Upper = grp["UPPER_PRED"][:]
+        X_Pred_Lower = grp["LOWER_PRED"][:]
+        Mask = np.array(grp["MASK"][:], dtype=np.bool_)
+
+    upperMeshList = [utils.surfaceVertices2WatertightO3dMesh(x) for x in X_Pred_Upper]
+    lowerMeshList = [utils.surfaceVertices2WatertightO3dMesh(x) for x in X_Pred_Lower]
+    numUpperT = len(upperMeshList)
+    
+    ex_rxyz, ex_txyz, focLth, dpix, u0, v0, rela_R, rela_t = proj.readCameraParamsFromH5(h5File=demoH5File, patientId=tagID)
+    fx = focLth / dpix
+
+    photos = proj.getPhotos(PHOTO_DIR, NAME_IDX_MAP, tagID, PHOTO_TYPES, (IMG_HEIGHT, IMG_WIDTH))
+    # photos = proj.getPhotos(EDGE_DIR, NAME_IDX_MAP, tagID, PHOTO_TYPES, (IMG_HEIGHT, IMG_WIDTH))
+
+    for phType, phMask, img in zip(PHOTO_ORDER, PHOTO_MASKS, photos):
+        visMask = phMask[Mask]
+        upperTeethO3dMsh = utils.mergeO3dTriangleMeshes([_msh for _msh,_vm in zip(upperMeshList,visMask[:numUpperT]) if _vm==True])
+        lowerTeethO3dMsh = utils.mergeO3dTriangleMeshes([_msh for _msh,_vm in zip(lowerMeshList,visMask[numUpperT:]) if _vm==True])
+        if phType != PHOTO.LOWER:
+            upperTeethO3dMsh.paint_uniform_color([0.75, 0.75, 0.75])
+            upperTeethO3dMsh.compute_vertex_normals()
+        if phType != PHOTO.UPPER:
+            lowerTeethO3dMsh.paint_uniform_color([0.75, 0.75, 0.75])
+            lowerTeethO3dMsh.compute_vertex_normals()
+        mshImg = generateProjectedMeshImg(tagID, visualizer, [upperTeethO3dMsh,lowerTeethO3dMsh], phType, ex_rxyz, ex_txyz, fx, u0, v0, rela_R, rela_t)
+        _mask = mshImg > 0
+        img = img[...,:3]
+        np.putmask(img, _mask, np.clip(0.4*mshImg+0.6*img, 0., 1.))
+        output = img
+        output_img_file = os.path.join(OUTPUT_DIR, "{}-{}.png".format(tagID, str(phType)))
+        print(output_img_file)
+        # skimage.io.imsave(output_img_file, skimage.img_as_ubyte(output))
+        skimage.io.imsave(output_img_file, skimage.img_as_ubyte(mshImg))
+
+
+
 
 def main():
-    TagIDRange = range(0, 95)
+    TagIDRange = [26,37,59,66]#range(0, 95)
     vis = o3d.visualization.Visualizer()
     vis.create_window(window_name="Image Screen Shot", visible=True, width=WINDOW_WIDTH, height=WINDOW_HEIGHT)
     opt = vis.get_render_option()
     opt.background_color = np.asarray([0, 0, 0])
     # vis.run() # block the visualizer
     for tagID in TagIDRange:
-        meshProjection(vis, tagID)
+        meshProjectionWithSelectedTeeth(vis, tagID)
+        # meshProjection(vis, tagID)
     vis.destroy_window()
 
     
