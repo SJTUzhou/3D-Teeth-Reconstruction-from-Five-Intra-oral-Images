@@ -1,12 +1,12 @@
-from re import M
+import matplotlib as mpl
 import open3d as o3d
 import os
 import copy
 import numpy as np
 import pandas as pd
 import h5py
-import open3d.visualization.rendering as rendering
-import open3d.visualization as visualization
+import scipy
+import matplotlib.pyplot as plt
 import skimage
 from scipy.spatial.transform import Rotation as RR
 import projection_utils as proj
@@ -31,42 +31,11 @@ PHOTO_ORDER = [PHOTO.UPPER, PHOTO.LOWER, PHOTO.LEFT, PHOTO.RIGHT, PHOTO.FRONTAL]
 PHOTO_MASKS = [MASK_UPPER, MASK_LOWER, MASK_LEFT, MASK_RIGHT, MASK_FRONTAL]
 PHOTO_TYPES = ["upperPhoto","lowerPhoto","leftPhoto","rightPhoto","frontalPhoto"]
 
-'''
-def proj_msh_on_img(img, o3dMsh, fx, fy, cx, cy):
-    img_height, img_width = img.shape[:2]
-    # Create a renderer with a set image width and height
-    render = rendering.OffscreenRenderer(img_width, img_height)
-    # setup camera intrinsic values
-    pinhole = o3d.camera.PinholeCameraIntrinsic(img_width, img_height, fx, fy, cx, cy)
-    # Pick a background colour of the rendered image, I set it as black (default is light gray)
-    render.scene.set_background([0.0, 0.0, 0.0, 1.0])  # RGBA
-    # (The base color does not replace the mesh's own colors.)
-    mtl = o3d.visualization.rendering.MaterialRecord()
-    mtl.base_color = [1.0, 1.0, 1.0, 1.0]  # RGBA
-    mtl.shader = "normals" # "defaultLitTransparency" # "normals" # "defaultLit"
-    # add mesh to the scene
-    render.scene.add_geometry("Mesh Model", o3dMsh, mtl)
-    # render the scene with respect to the camera
-    # open3d 默认相机坐标系 +X points to the right; +Y points up; +Z points out of the screen
-    # Sets the position and orientation of the camera: look_at(center(相机镜头朝向), eye(相机位置), up(相机up-vector))
-    _center = np.array([0,0,1])
-    _eye = np.array([0,0,0])
-    _up = np.array([0,-1,0])
-    render.scene.camera.look_at(_center, _eye, _up) # 将相机+X，+Y方向变为与图片坐标系一致
-    render.scene.camera.set_projection(pinhole.intrinsic_matrix, 0.0, np.inf, img_width, img_height)
-    # print(pinhole.intrinsic_matrix)
-    # print(render.scene.camera.get_view_matrix()) # view matrix
-    # print(render.scene.camera.get_model_matrix()) # model matrix 
-    # print(render.scene.camera.get_projection_matrix()) # projection matrix
-    img_o3d = render.render_to_image()
-    # we can now save the rendered image right at this point 
-    o3d.io.write_image("output.png", img_o3d, 9)
-'''
-
 
 
 
 def generateProjectedMeshImg(tagID, visualizer, ulTeethMshes, phType, ex_rxyz, ex_txyz, fx, u0, v0, rela_R, rela_t):
+    """加载o3dTriangleMesh到指定的visualizer中,并设置相机参数进行投影,返回投影得到的2d图像的数组"""
     visualizer.clear_geometries()
     ph = phType.value
     msh = None
@@ -103,7 +72,9 @@ def generateProjectedMeshImg(tagID, visualizer, ulTeethMshes, phType, ex_rxyz, e
     # print(croppedImg.shape)
     return croppedImg
 
+
 def meshProjection(visualizer, tagID):
+    """将所有的牙齿进行投影,并叠加到照片上"""
     demoH5File = os.path.join(H5_DIR, r"demo_TagID={}.h5".format(tagID))
     upperTeethObj = os.path.join(MESH_DIR, str(tagID), r"Pred_Upper_Mesh_TagID={}.obj".format(tagID))
     lowerTeethObj = os.path.join(MESH_DIR, str(tagID), r"Pred_Lower_Mesh_TagID={}.obj".format(tagID))
@@ -133,7 +104,13 @@ def meshProjection(visualizer, tagID):
 
 
 
+
+
+
+
+
 def meshProjectionWithSelectedTeeth(visualizer, tagID):
+    """根据照片种类的不同对指定编号的牙齿进行投影"""
     demoH5File = os.path.join(H5_DIR, r"demo_TagID={}.h5".format(tagID))
     with h5py.File(demoH5File, 'r') as f:
         grp = f[str(tagID)]
@@ -149,7 +126,6 @@ def meshProjectionWithSelectedTeeth(visualizer, tagID):
     fx = focLth / dpix
 
     photos = proj.getPhotos(PHOTO_DIR, NAME_IDX_MAP, tagID, PHOTO_TYPES, (IMG_HEIGHT, IMG_WIDTH))
-    # photos = proj.getPhotos(EDGE_DIR, NAME_IDX_MAP, tagID, PHOTO_TYPES, (IMG_HEIGHT, IMG_WIDTH))
 
     for phType, phMask, img in zip(PHOTO_ORDER, PHOTO_MASKS, photos):
         visMask = phMask[Mask]
@@ -168,21 +144,116 @@ def meshProjectionWithSelectedTeeth(visualizer, tagID):
         output = img
         output_img_file = os.path.join(OUTPUT_DIR, "{}-{}.png".format(tagID, str(phType)))
         print(output_img_file)
-        # skimage.io.imsave(output_img_file, skimage.img_as_ubyte(output))
+        # skimage.io.imsave(output_img_file, skimage.img_as_ubyte(output)) # project mesh on photos
+        skimage.io.imsave(output_img_file, skimage.img_as_ubyte(mshImg)) # only project mesh
+
+
+
+
+
+
+
+
+
+def vertex_error(x_pred, x_ref):
+    """计算两组点云中点之间的最短距离"""
+    dist_mat = scipy.spatial.distance_matrix(x_pred, x_ref, p=2, threshold=int(1e8))
+    return np.min(dist_mat, axis=1)
+
+def get_color_array(metric_array, metric_min=0., metric_max=1.8, plt_cmap_name="jet"):
+    """generate color array based on the metric array; 
+    the metric array is clipped by [metric_min, metric_max] and normalized to [0,1] """
+    _metric = np.clip(metric_array, metric_min, metric_max)
+    _metric = _metric / (metric_max-metric_min) # nor
+    _cmap = plt.cm.get_cmap(plt_cmap_name)
+    _colors = _cmap(_metric) # numpy.array, shape=(len(metric_array),4)
+    return _colors[:,:3] # drop alpha channel
+
+
+def meshErrorProjectionWithSelectedTeeth(visualizer, tagID):
+    """根据照片种类的不同对指定编号的牙齿的配准误差进行投影"""
+    demoH5File = os.path.join(H5_DIR, r"demo_TagID={}.h5".format(tagID))
+    with h5py.File(demoH5File, 'r') as f:
+        grp = f[str(tagID)]
+        X_Pred_Upper = grp["UPPER_PRED"][:]
+        X_Pred_Lower = grp["LOWER_PRED"][:]
+        X_Ref_Upper = grp["UPPER_REF"][:]
+        X_Ref_Lower = grp["LOWER_REF"][:]
+        Mask = np.array(grp["MASK"][:], dtype=np.bool_)
+    ex_rxyz, ex_txyz, focLth, dpix, u0, v0, rela_R, rela_t = proj.readCameraParamsFromH5(h5File=demoH5File, patientId=tagID)
+    fx = focLth / dpix
+
+    with_scale = True
+    T_Upper = utils.computeTransMatByCorres(X_Pred_Upper.reshape(-1,3), X_Ref_Upper.reshape(-1,3), with_scale=with_scale)
+    T_Lower = utils.computeTransMatByCorres(X_Pred_Lower.reshape(-1,3), X_Ref_Lower.reshape(-1,3), with_scale=with_scale)
+
+    upperMeshList = [utils.surfaceVertices2WatertightO3dMesh(x) for x in X_Pred_Upper]
+    lowerMeshList = [utils.surfaceVertices2WatertightO3dMesh(x) for x in X_Pred_Lower]
+    numUpperT = len(upperMeshList)
+
+    upperColors = []
+    lowerColors = []
+    for i,_msh in enumerate(upperMeshList):
+        _vertices = np.matmul(np.asarray(_msh.vertices), T_Upper[:3,:3]) + T_Upper[3,:3]
+        _err = vertex_error(_vertices, X_Ref_Upper[i])
+        upperColors.append(get_color_array(_err))
+    for i,_msh in enumerate(lowerMeshList):
+        _vertices = np.matmul(np.asarray(_msh.vertices), T_Lower[:3,:3]) + T_Lower[3,:3]
+        _err = vertex_error(_vertices, X_Ref_Lower[i])
+        lowerColors.append(get_color_array(_err))
+
+    
+    for phType, phMask in zip(PHOTO_ORDER, PHOTO_MASKS):
+        visMask = phMask[Mask]
+        upperTeethO3dMsh = utils.mergeO3dTriangleMeshes([_msh for _msh,_vm in zip(upperMeshList,visMask[:numUpperT]) if _vm==True])
+        lowerTeethO3dMsh = utils.mergeO3dTriangleMeshes([_msh for _msh,_vm in zip(lowerMeshList,visMask[numUpperT:]) if _vm==True])
+        if phType != PHOTO.LOWER:
+            upperTeethO3dMsh.compute_vertex_normals()
+            _colors = np.vstack([_c for _c,_m in zip(upperColors, visMask[:numUpperT]) if _m==True])
+            upperTeethO3dMsh.vertex_colors = o3d.utility.Vector3dVector(_colors)
+
+        if phType != PHOTO.UPPER:
+            lowerTeethO3dMsh.compute_vertex_normals()
+            _colors = np.vstack([_c for _c,_m in zip(lowerColors, visMask[numUpperT:]) if _m==True])
+            lowerTeethO3dMsh.vertex_colors = o3d.utility.Vector3dVector(_colors)
+        mshImg = generateProjectedMeshImg(tagID, visualizer, [upperTeethO3dMsh,lowerTeethO3dMsh], phType, ex_rxyz, ex_txyz, fx, u0, v0, rela_R, rela_t)
+        output_img_file = os.path.join(OUTPUT_DIR, "{}-{}.png".format(tagID, str(phType)))
+        print(output_img_file)
         skimage.io.imsave(output_img_file, skimage.img_as_ubyte(mshImg))
 
 
 
 
+def color_bar():
+    fig, ax = plt.subplots(figsize=(9,1.5))
+    fig.subplots_adjust(bottom=0.5)
+
+    cmap = mpl.cm.get_cmap("jet")
+    norm = mpl.colors.Normalize(vmin=0, vmax=1.8)
+
+    cb = mpl.colorbar.ColorbarBase(ax, cmap=cmap,
+                                    norm=norm,
+                                    orientation='horizontal')
+    cb.set_label('Alignment Error (mm)',size=16)
+    cb.ax.tick_params(labelsize=16)
+    # fig.show()
+    plt.show()
+
+
+
 def main():
-    TagIDRange = [26,37,59,66]#range(0, 95)
+    TagIDRange = [37,] #[26,37,59,66] #range(0, 95)
     vis = o3d.visualization.Visualizer()
     vis.create_window(window_name="Image Screen Shot", visible=True, width=WINDOW_WIDTH, height=WINDOW_HEIGHT)
     opt = vis.get_render_option()
-    opt.background_color = np.asarray([0, 0, 0])
+    # opt.background_color = np.asarray([0, 0, 0])
+    opt.background_color = np.asarray([1, 1, 1])
+    opt.mesh_color_option = o3d.visualization.MeshColorOption.Color # Normal
+
     # vis.run() # block the visualizer
     for tagID in TagIDRange:
-        meshProjectionWithSelectedTeeth(vis, tagID)
+        meshErrorProjectionWithSelectedTeeth(vis, tagID)
+        # meshProjectionWithSelectedTeeth(vis, tagID)
         # meshProjection(vis, tagID)
     vis.destroy_window()
 
@@ -194,4 +265,5 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    # main()
+    color_bar()
