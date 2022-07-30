@@ -112,6 +112,23 @@ def analyze_metrics(metric_csv):
     print(statistics_df)
     return statistics_df.T
 
+
+def plot_precision_recall_curve():
+    _versions = {"v20":("L_BCE + L_SSIM","red"), "v21":("L_Dice + L_SSIM","blue")}
+    for _ver,(_legend,_color) in _versions.items():
+        pr_dfs = []
+        for _fold in [1,2,3,4,5]:
+            pr_csv = r"./dataWithPhoto/_temp/pr_curve_{}_fold{}.csv".format(_ver,_fold)
+            pr_df = pd.read_csv(pr_csv)
+            pr_dfs.append(pr_df)
+        df = pd.concat(pr_dfs, ignore_index=True)
+        avg_pr_df = df.groupby("threshold").mean()
+        plt.plot(avg_pr_df["precision"].to_numpy(), avg_pr_df["recall"].to_numpy(),_color,label=_legend)
+    plt.xlim([0.7,0.9])
+    plt.ylim([0.7,0.9])
+    plt.legend()
+    plt.show()
+
 if __name__ == "__main__":
     # # 多线程并行计算三维重建各个Metric
     # NUM_CPUS = psutil.cpu_count(logical=False)
@@ -135,4 +152,7 @@ if __name__ == "__main__":
     # df = pd.concat(metric_DFs, ignore_index=True)
     # df.to_csv(EVAL_SSM_CSV, mode='a', index=False, header=True)
 
-    analyze_metrics(EVAL_SSM_CSV)
+    # # 分析SSM的评估指标
+    # analyze_metrics(EVAL_SSM_CSV)
+
+    plot_precision_recall_curve()

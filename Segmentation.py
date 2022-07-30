@@ -1,6 +1,7 @@
 import os
 import glob
 import numpy as np
+import pandas as pd
 import tensorflow as tf
 import sys
 import skimage
@@ -18,6 +19,7 @@ print = functools.partial(print, flush=True)
 EXPANSION_RATE = 3
 IMAGE_SUBDIR = "image"
 LABEL_SUBDIR = "label-revised"
+
 
 def dice_loss(y_true, y_pred, smooth=1.):
     intersection = tf.reduce_sum(y_true*y_pred)
@@ -407,8 +409,27 @@ def evaluate(model, save_pred_mask=False, mask_shape=(1080,1440)):
         valid_pred_file_names = [os.path.join(VALID_PRED_PATH,os.path.basename(f)) for f in valid_img_names]
         save_pred_masks(valid_pred_labels, valid_pred_file_names, mask_shape)
 
+
+
+def precision_recall_curve_data(model, step=0.01):
+    valid_image, valid_label = get_data_filenames(VALID_PATH)
+    if not LOW_MEMORY: # 内存充足
+        valid_image, valid_label = read_data(VALID_PATH)
+    valid_dg = DataGenerator(valid_image, valid_label, batch_size=1, train=False)
+    # evaluate
+    valid_pred_labels = model.predict(valid_dg)
+    valid_labels = np.concatenate([img_lbl_pair[1] for img_lbl_pair in valid_dg], axis=0)
+    recalls = []
+    precisions = []
+    thres = [i/100 for i in range(0,101,int(100*step))]
+    for thre in thres:
+        _recall, _precision, _f1 = compute_avg_recall_precision_F1score(valid_labels, valid_pred_labels, thre, from_logits=False)
+        recalls.append(_recall)
+        precisions.append(_precision)
+    return thres, recalls, precisions
+
         
-def train():
+def train(train=True):
     # model = UNet2015(IMG_SHAPE, kern_size=3, filters=[32,64,128,256]) # VERSION: v2(L_Dice), v3(L_Dice+0.01*L_HD)
     # model = AtrousResUNet(IMG_SHAPE, dila_rates=[1,2,4,8], filters=[4,8,16,32,64])  # VERSION: v4(L_Dice+0.01*L_HD) Sequential Dilated Conv!
     # model = UNet2015(IMG_SHAPE, kern_size=3, filters=[16,32,64,128,256]) # VERSION: v5(L_Dice+0.01*L_HD)
@@ -453,7 +474,8 @@ def train():
 
     print(weight_ckpt)
     model_checkpoint = ModelCheckpoint(weight_ckpt, monitor='val_loss',verbose=2, save_best_only=True, save_weights_only=True)
-    ret = model.fit(x=train_dg, validation_data=valid_dg, epochs=50, verbose=2, callbacks=[model_checkpoint])
+    if train==True:
+        ret = model.fit(x=train_dg, validation_data=valid_dg, epochs=50, verbose=2, callbacks=[model_checkpoint])
     model.load_weights(weight_ckpt)
 
     return model
@@ -470,13 +492,23 @@ if __name__ == "__main__":
         VALID_PRED_PATH = os.path.join(VALID_PATH, r"pred-{}/".format(VERSION))
         if not os.path.exists(VALID_PRED_PATH):
             os.makedirs(VALID_PRED_PATH)
-        LogFile = os.path.join(ROOT_DIR, "train-{}.log".format(VERSION))
-        # # Log file
-        # if os.path.exists(LogFile):
-        #     os.remove(LogFile)
-        log = open(LogFile, "a", encoding='utf-8')
-        sys.stdout = log
         
-        model = train()
-        evaluate(model, save_pred_mask=True)
-        log.close()
+        # Train and evaluation
+        # LogFile = os.path.join(ROOT_DIR, "train-{}.log".format(VERSION))
+        # # # Log file
+        # # if os.path.exists(LogFile):
+        # #     os.remove(LogFile)
+        # log = open(LogFile, "a", encoding='utf-8')
+        # sys.stdout = log
+        
+        # model = train()
+        # evaluate(model, save_pred_mask=True)
+        # log.close()
+
+
+        # 记录Precision-Recall的数据
+        PRECISON_RECALL_CSV = r"./dataWithPhoto/_temp/pr_curve_{}_fold{}.csv".format(VERSION,FOLD_IDX)
+        model = train(False)
+        thres, recalls, precisions = precision_recall_curve_data(model)
+        df_PR = pd.DataFrame({"threshold":thres, "precision":precisions, "recall":recalls})
+        df_PR.to_csv(PRECISON_RECALL_CSV, index=False, header=True)
