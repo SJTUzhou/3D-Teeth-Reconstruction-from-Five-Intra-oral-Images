@@ -198,7 +198,7 @@ def run_emopt(TagID, phase):
         
 
         maxiter = 20
-        stageIter = [10,5,5]
+        stageIter = [10,5,10]
 
         print("-"*100)
         print("Start Stage 0.")
