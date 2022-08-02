@@ -82,21 +82,24 @@ def meshProjection(visualizer, tagID):
     fx = focLth / dpix
 
     photos = proj.getPhotos(PHOTO_DIR, NAME_IDX_MAP, tagID, PHOTO_TYPES, (IMG_HEIGHT, IMG_WIDTH))
-    # photos = proj.getPhotos(EDGE_DIR, NAME_IDX_MAP, tagID, PHOTO_TYPES, (IMG_HEIGHT, IMG_WIDTH))
+
+    _color = [0.55, 0.7, 0.85]
+    _alpha = 0.45
 
     upperTeethO3dMsh = o3d.io.read_triangle_mesh(upperTeethObj)
-    upperTeethO3dMsh.paint_uniform_color([0.75, 0.75, 0.75])
+    upperTeethO3dMsh.paint_uniform_color(_color)
     upperTeethO3dMsh.compute_vertex_normals()
 
     lowerTeethO3dMsh = o3d.io.read_triangle_mesh(lowerTeethObj)
-    lowerTeethO3dMsh.paint_uniform_color([0.75, 0.75, 0.75])
+    lowerTeethO3dMsh.paint_uniform_color(_color)
     lowerTeethO3dMsh.compute_vertex_normals()
 
     for phType, img in zip(PHOTO_ORDER, photos):
         mshImg = generateProjectedMeshImg(tagID, visualizer, [upperTeethO3dMsh,lowerTeethO3dMsh], phType, ex_rxyz, ex_txyz, fx, u0, v0, rela_R, rela_t)
-        _mask = mshImg > 0
+        bkgrd = np.all(mshImg < 0.01, axis=-1)
+        _teethRegion = np.tile(~bkgrd[...,None],(1,1,3)) 
         img = img[...,:3]
-        np.putmask(img, _mask, np.clip(0.4*mshImg+0.6*img, 0., 1.))
+        np.putmask(img, _teethRegion, np.clip(_alpha*mshImg+(1.-_alpha)*img, 0., 1.))
         output = img
         output_img_file = os.path.join(OUTPUT_DIR, "{}-{}.png".format(tagID, str(phType)))
         print(output_img_file)
@@ -126,26 +129,30 @@ def meshProjectionWithSelectedTeeth(visualizer, tagID):
     fx = focLth / dpix
 
     photos = proj.getPhotos(PHOTO_DIR, NAME_IDX_MAP, tagID, PHOTO_TYPES, (IMG_HEIGHT, IMG_WIDTH))
+    _color = [0.55, 0.7, 0.85]
+    _alpha = 0.45
 
     for phType, phMask, img in zip(PHOTO_ORDER, PHOTO_MASKS, photos):
         visMask = phMask[Mask]
         upperTeethO3dMsh = utils.mergeO3dTriangleMeshes([_msh for _msh,_vm in zip(upperMeshList,visMask[:numUpperT]) if _vm==True])
         lowerTeethO3dMsh = utils.mergeO3dTriangleMeshes([_msh for _msh,_vm in zip(lowerMeshList,visMask[numUpperT:]) if _vm==True])
         if phType != PHOTO.LOWER:
-            upperTeethO3dMsh.paint_uniform_color([0.75, 0.75, 0.75])
+            upperTeethO3dMsh.paint_uniform_color(_color)
             upperTeethO3dMsh.compute_vertex_normals()
         if phType != PHOTO.UPPER:
-            lowerTeethO3dMsh.paint_uniform_color([0.75, 0.75, 0.75])
+            lowerTeethO3dMsh.paint_uniform_color(_color)
             lowerTeethO3dMsh.compute_vertex_normals()
+        
         mshImg = generateProjectedMeshImg(tagID, visualizer, [upperTeethO3dMsh,lowerTeethO3dMsh], phType, ex_rxyz, ex_txyz, fx, u0, v0, rela_R, rela_t)
-        _mask = mshImg > 0
+        bkgrd = np.all(mshImg < 0.01, axis=-1)
+        _teethRegion = np.tile(~bkgrd[...,None],(1,1,3)) 
         img = img[...,:3]
-        np.putmask(img, _mask, np.clip(0.4*mshImg+0.6*img, 0., 1.))
+        np.putmask(img, _teethRegion, np.clip(_alpha*mshImg+(1.-_alpha)*img, 0., 1.))
         output = img
         output_img_file = os.path.join(OUTPUT_DIR, "{}-{}.png".format(tagID, str(phType)))
         print(output_img_file)
-        # skimage.io.imsave(output_img_file, skimage.img_as_ubyte(output)) # project mesh on photos
-        skimage.io.imsave(output_img_file, skimage.img_as_ubyte(mshImg)) # only project mesh
+        skimage.io.imsave(output_img_file, skimage.img_as_ubyte(output)) # project mesh on photos
+        # skimage.io.imsave(output_img_file, skimage.img_as_ubyte(mshImg)) # only project mesh
 
 
 
@@ -242,18 +249,18 @@ def color_bar():
 
 
 def main():
-    TagIDRange = [37,] #[26,37,59,66] #range(0, 95)
+    TagIDRange = range(0, 95) #[26,37,59,66] #range(0, 95)
     vis = o3d.visualization.Visualizer()
     vis.create_window(window_name="Image Screen Shot", visible=True, width=WINDOW_WIDTH, height=WINDOW_HEIGHT)
     opt = vis.get_render_option()
-    # opt.background_color = np.asarray([0, 0, 0])
-    opt.background_color = np.asarray([1, 1, 1])
+    opt.background_color = np.asarray([0, 0, 0])
+    # opt.background_color = np.asarray([1, 1, 1])
     opt.mesh_color_option = o3d.visualization.MeshColorOption.Color # Normal
 
     # vis.run() # block the visualizer
     for tagID in TagIDRange:
-        meshErrorProjectionWithSelectedTeeth(vis, tagID)
-        # meshProjectionWithSelectedTeeth(vis, tagID)
+        # meshErrorProjectionWithSelectedTeeth(vis, tagID)
+        meshProjectionWithSelectedTeeth(vis, tagID)
         # meshProjection(vis, tagID)
     vis.destroy_window()
 
@@ -265,5 +272,5 @@ def main():
 
 
 if __name__ == "__main__":
-    # main()
-    color_bar()
+    main()
+    # color_bar()

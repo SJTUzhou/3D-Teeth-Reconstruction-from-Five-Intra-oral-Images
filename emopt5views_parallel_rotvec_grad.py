@@ -1291,8 +1291,8 @@ class EMOpt5Views(object):
         elif stage == 2:
             numT = self.numTooth
             tXYZs_d = 10.*self.transVecStd
-            rXYZs_d = 5.*self.rotVecStd
-            scales_d = 5.*self.scaleStd
+            rXYZs_d = 4.*self.rotVecStd
+            scales_d = 4.*self.scaleStd
             if step == 1:
                 bounds += [(-tXYZs_d,tXYZs_d)] * (3*numT) # add bounds for tooth translation vecs
             elif step == 2:
