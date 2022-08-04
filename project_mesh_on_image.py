@@ -15,8 +15,8 @@ from projection_utils import PHOTO, MASK_FRONTAL, MASK_LEFT, MASK_LOWER, MASK_RI
 
 
 
-H5_DIR = r"./dataWithPhoto/demo/Grad-99%conf-v21-PC=10/"
-MESH_DIR = r"./dataWithPhoto/demoMesh/Grad-99%conf-v21-PC=10/"
+H5_DIR = r"./dataWithPhoto/demo/" # r"./dataWithPhoto/demo/Grad-99%conf-v21-PC=10/"
+MESH_DIR = r"./dataWithPhoto/demoMesh/" # r"./dataWithPhoto/demoMesh/Grad-99%conf-v21-PC=10/"
 PHOTO_DIR = r"./dataWithPhoto/normal_resized/"
 EDGE_DIR = r"./dataWithPhoto/normal_mask/"
 IMG_WIDTH = 800
@@ -84,6 +84,7 @@ def meshProjection(visualizer, tagID):
     photos = proj.getPhotos(PHOTO_DIR, NAME_IDX_MAP, tagID, PHOTO_TYPES, (IMG_HEIGHT, IMG_WIDTH))
 
     _color = [0.55, 0.7, 0.85]
+    _color = [0.75, 0.75, 0.75]
     _alpha = 0.45
 
     upperTeethO3dMsh = o3d.io.read_triangle_mesh(upperTeethObj)
@@ -103,7 +104,10 @@ def meshProjection(visualizer, tagID):
         output = img
         output_img_file = os.path.join(OUTPUT_DIR, "{}-{}.png".format(tagID, str(phType)))
         print(output_img_file)
-        skimage.io.imsave(output_img_file, skimage.img_as_ubyte(output))
+        skimage.io.imsave(output_img_file, skimage.img_as_ubyte(mshImg))
+        # skimage.io.imsave(output_img_file, skimage.img_as_ubyte(output))
+
+
 
 
 
@@ -130,6 +134,7 @@ def meshProjectionWithSelectedTeeth(visualizer, tagID):
 
     photos = proj.getPhotos(PHOTO_DIR, NAME_IDX_MAP, tagID, PHOTO_TYPES, (IMG_HEIGHT, IMG_WIDTH))
     _color = [0.55, 0.7, 0.85]
+    _color = [0.75, 0.75, 0.75]
     _alpha = 0.45
 
     for phType, phMask, img in zip(PHOTO_ORDER, PHOTO_MASKS, photos):
@@ -151,8 +156,8 @@ def meshProjectionWithSelectedTeeth(visualizer, tagID):
         output = img
         output_img_file = os.path.join(OUTPUT_DIR, "{}-{}.png".format(tagID, str(phType)))
         print(output_img_file)
-        skimage.io.imsave(output_img_file, skimage.img_as_ubyte(output)) # project mesh on photos
-        # skimage.io.imsave(output_img_file, skimage.img_as_ubyte(mshImg)) # only project mesh
+        # skimage.io.imsave(output_img_file, skimage.img_as_ubyte(output)) # project mesh on photos
+        skimage.io.imsave(output_img_file, skimage.img_as_ubyte(mshImg)) # only project mesh
 
 
 
@@ -249,7 +254,7 @@ def color_bar():
 
 
 def main():
-    TagIDRange = range(0, 95) #[26,37,59,66] #range(0, 95)
+    TagIDRange = range(0,95) #[26,37,59,66] #range(0, 95)
     vis = o3d.visualization.Visualizer()
     vis.create_window(window_name="Image Screen Shot", visible=True, width=WINDOW_WIDTH, height=WINDOW_HEIGHT)
     opt = vis.get_render_option()
@@ -260,8 +265,8 @@ def main():
     # vis.run() # block the visualizer
     for tagID in TagIDRange:
         # meshErrorProjectionWithSelectedTeeth(vis, tagID)
-        meshProjectionWithSelectedTeeth(vis, tagID)
-        # meshProjection(vis, tagID)
+        # meshProjectionWithSelectedTeeth(vis, tagID)
+        meshProjection(vis, tagID)
     vis.destroy_window()
 
     

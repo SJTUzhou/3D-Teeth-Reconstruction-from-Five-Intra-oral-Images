@@ -461,17 +461,17 @@ if __name__ == "__main__":
         main(phase=1)
 
     else:
-        # phase 0
-        NUM_CPUS = psutil.cpu_count(logical=False)
-        ray.init(num_cpus=NUM_CPUS, num_gpus=1) #ray(多线程)初始化
-        for FOLD_IDX in [5,4,3,2,1]:
-            EDGE_MASK_PATH = r"./dataWithPhoto/learning/fold{}/test/pred-{}/".format(FOLD_IDX, VERSION)
-            main(phase=0)
+        # # phase 0
+        # NUM_CPUS = psutil.cpu_count(logical=False)
+        # ray.init(num_cpus=NUM_CPUS, num_gpus=1) #ray(多线程)初始化
+        # for FOLD_IDX in [5,4,3,2,1]:
+        #     EDGE_MASK_PATH = r"./dataWithPhoto/learning/fold{}/test/pred-{}/".format(FOLD_IDX, VERSION)
+        #     main(phase=0)
             
 
-        # # create demo triangle meshes
-        # NUM_CPUS = psutil.cpu_count(logical=False) 
-        # ray.init(num_cpus=NUM_CPUS, num_gpus=1) #ray(多线程)初始化
-        # ray.get([createAlignedPredMeshes.remote(TagID) for TagID in TagIDs])
+        # create demo triangle meshes
+        NUM_CPUS = psutil.cpu_count(logical=False) 
+        ray.init(num_cpus=NUM_CPUS, num_gpus=1) #ray(多线程)初始化
+        ray.get([createAlignedPredMeshes.remote(TagID) for TagID in TagIDs])
 
     
