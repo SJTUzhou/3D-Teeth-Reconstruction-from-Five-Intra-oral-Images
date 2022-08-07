@@ -1,6 +1,5 @@
 import os
 import sys
-from tracemalloc import Statistic
 import h5py
 import numpy as np
 import pandas as pd

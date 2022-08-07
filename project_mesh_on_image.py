@@ -214,8 +214,8 @@ def meshErrorProjectionWithSelectedTeeth(visualizer, tagID):
         _err = vertex_error(_vertices, X_Ref_Lower[i])
         lowerColors.append(get_color_array(_err))
 
-    
-    for phType, phMask in zip(PHOTO_ORDER, PHOTO_MASKS):
+    _PHOTO_MASKS = [np.ones((28,),dtype=np.bool_)] * 5
+    for phType, phMask in zip(PHOTO_ORDER, _PHOTO_MASKS):
         visMask = phMask[Mask]
         upperTeethO3dMsh = utils.mergeO3dTriangleMeshes([_msh for _msh,_vm in zip(upperMeshList,visMask[:numUpperT]) if _vm==True])
         lowerTeethO3dMsh = utils.mergeO3dTriangleMeshes([_msh for _msh,_vm in zip(lowerMeshList,visMask[numUpperT:]) if _vm==True])
@@ -258,15 +258,15 @@ def main():
     vis = o3d.visualization.Visualizer()
     vis.create_window(window_name="Image Screen Shot", visible=True, width=WINDOW_WIDTH, height=WINDOW_HEIGHT)
     opt = vis.get_render_option()
-    opt.background_color = np.asarray([0, 0, 0])
-    # opt.background_color = np.asarray([1, 1, 1])
+    # opt.background_color = np.asarray([0, 0, 0])
+    opt.background_color = np.asarray([1, 1, 1])
     opt.mesh_color_option = o3d.visualization.MeshColorOption.Color # Normal
 
     # vis.run() # block the visualizer
     for tagID in TagIDRange:
-        # meshErrorProjectionWithSelectedTeeth(vis, tagID)
+        meshErrorProjectionWithSelectedTeeth(vis, tagID)
         # meshProjectionWithSelectedTeeth(vis, tagID)
-        meshProjection(vis, tagID)
+        # meshProjection(vis, tagID)
     vis.destroy_window()
 
     
@@ -277,5 +277,5 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
-    # color_bar()
+    # main()
+    color_bar()

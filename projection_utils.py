@@ -238,6 +238,14 @@ def loadAlignedTeethPgWithMaskByIndex(index, pgShape, srcRootDir):
     PGs = [np.loadtxt(f) if mask==True else np.zeros(pgShape) for f,mask in zip(pgTxts,masks)]
     return np.array(masks), np.array(PGs)
 
+def loadAlignedToothRowPgWithMask(index, pgShape, srcRootDir, UorL="U"):
+    assert UorL in ["U","L"]
+    indices = UPPER_INDICES if UorL == "U" else LOWER_INDICES
+    pgTxts = [os.path.join(srcRootDir, str(tID), "{}{}.txt".format(index,UorL)) for tID in indices]
+    masks = [os.path.exists(f) for f in pgTxts]
+    PGs = [np.loadtxt(f) if mask==True else np.zeros(pgShape) for f,mask in zip(pgTxts,masks)]
+    return np.array(masks), np.array(PGs)
+
 def loadDataSet(invParamDF, Mu, Sigma, pgShape, srcRootDir):
     Y_mask = [] # shape=(None,28,1,1)
     Y_scale = [] # shape=(None,28,1,1)
