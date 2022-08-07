@@ -19,6 +19,7 @@ DEMO_H5_DIR = r"./dataWithPhoto/demo/Grad-99%conf-v21-PC=10/"
 EVAL_SSM_CSV = r"./dataWithPhoto/_temp/evaluation_SSM.csv"
 EVAL_3D_RE_CSV = r"./dataWithPhoto/_temp/evaluation_3Dre.csv"
 EVAL_3D_RE_STATIS_CSV = r"./dataWithPhoto/_temp/3Dre_statistics.csv"
+NEAREST_RETRIEVAL_CSV = r"./dataWithPhoto/_temp/evaluation_nearest_retrieval.csv"
 TOOTH_INDICES = UPPER_INDICES + LOWER_INDICES
 
 @ray.remote
@@ -154,4 +155,6 @@ if __name__ == "__main__":
     # # 分析SSM的评估指标
     # analyze_metrics(EVAL_SSM_CSV)
 
-    plot_precision_recall_curve()
+    analyze_metrics(NEAREST_RETRIEVAL_CSV)
+
+    # plot_precision_recall_curve()
