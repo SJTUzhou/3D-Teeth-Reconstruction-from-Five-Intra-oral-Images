@@ -5,11 +5,13 @@ import numpy as np
 import pandas as pd
 from matplotlib import pyplot as plt
 import scipy
+from scipy import stats
 import scipy.io
 import utils
 import projection_utils as proj
 import ray
 import psutil
+import seaborn
 from utils import UPPER_INDICES, LOWER_INDICES
 
 
@@ -92,6 +94,44 @@ def evaluation_3D_reconstruction(TagID):
     print("Finish TagID: ", TagID)
     return df
 
+
+
+
+
+def violin_plot_metrics(metric_csv):
+    # violin plot of statistics for each tooth
+    df = pd.read_csv(metric_csv)
+    arches = ["UR","UL","LL","LR"]
+    tooth_types = ["central incisor", "lateral incisor", "canine", "1st premolar", "2nd premolar", "1st molar", "2nd molar"]
+    tooth_names = ["{} {}".format(arc,nam) for arc in arches for nam in tooth_types ]
+
+    colors_list = seaborn.color_palette()[:7] * 4
+    y_labels = ["Root mean squared surface distance (mm)", "Average symmetric surface distance (mm)", \
+        "Hausdorff distance (mm)", "Dice similarity coefficient", "Volumetric overlap error (%)"]
+    ylims = [(0.,2.5),(0.,2.5),(0.,5.),(0.,1.),(0.,1.)]
+
+    for met,metric_name in enumerate(["RMSD", "ASSD", "HD", "DSC", "VOE"]):
+        values_per_tooth = df.groupby("toothID")[metric_name].apply(list).to_list()
+        for i,vals in enumerate(values_per_tooth):
+            vals = np.array(vals)
+            _mask = np.abs(stats.zscore(vals)) < 3.5
+            values_per_tooth[i] = vals[_mask]
+        seaborn.set(style = 'whitegrid') 
+        axes = seaborn.violinplot(data=values_per_tooth, palette=colors_list)
+        axes.set_xticks([y for y in range(len(values_per_tooth))],
+                  labels=tooth_names, rotation=90)
+        
+        axes.yaxis.grid(True)
+        axes.set_ylim(ylims[met])
+        axes.set_ylabel(y_labels[met], fontsize=10)
+        axes.tick_params(axis='both', which='both', labelsize=10)
+        fig = plt.gcf()
+        fig.set_size_inches(12,4)
+        plt.tight_layout()
+        # fig.savefig('violin_plot_{}.png'.format(metric_name), dpi=300)
+        plt.show()
+
+
 def analyze_metrics_per_tooth_type(metric_csv):
     df = pd.read_csv(metric_csv)
     statistics_DFs = []
@@ -130,19 +170,19 @@ def plot_precision_recall_curve():
     plt.show()
 
 if __name__ == "__main__":
-    # # 多线程并行计算三维重建各个Metric
-    # NUM_CPUS = psutil.cpu_count(logical=False)
-    # ray.init(num_cpus=NUM_CPUS, num_gpus=1) #ray(多线程)初始化
-    # metric_DFs = ray.get([evaluation_3D_reconstruction.remote(tagID) for tagID in range(0,95)])
-    # df = pd.concat(metric_DFs, ignore_index=True)
-    # df.to_csv(EVAL_3D_RE_CSV, mode='a', index=False, header=True)
+    # 多线程并行计算三维重建各个Metric
+    NUM_CPUS = psutil.cpu_count(logical=False)
+    ray.init(num_cpus=NUM_CPUS, num_gpus=1) #ray(多线程)初始化
+    metric_DFs = ray.get([evaluation_3D_reconstruction.remote(tagID) for tagID in range(0,95)])
+    df = pd.concat(metric_DFs, ignore_index=True)
+    df.to_csv(EVAL_3D_RE_CSV, mode='a', index=False, header=True)
 
-    # # 保存按牙齿分类的三维重建评估指标
-    # df = analyze_metrics_per_tooth_type(EVAL_3D_RE_CSV)
-    # df.to_csv(EVAL_3D_RE_STATIS_CSV, index=True, float_format='%.4f')
+    # 保存按牙齿分类的三维重建评估指标
+    df = analyze_metrics_per_tooth_type(EVAL_3D_RE_CSV)
+    df.to_csv(EVAL_3D_RE_STATIS_CSV, index=True, float_format='%.4f')
 
-    # # 分析整体的三维重建评估指标
-    # analyze_metrics(EVAL_3D_RE_CSV)
+    # 分析整体的三维重建评估指标
+    analyze_metrics(EVAL_3D_RE_CSV)
 
     # # 多线程SSM计算SSM评估指标
     # NUM_CPUS = psutil.cpu_count(logical=False)
@@ -155,6 +195,9 @@ if __name__ == "__main__":
     # # 分析SSM的评估指标
     # analyze_metrics(EVAL_SSM_CSV)
 
-    analyze_metrics(NEAREST_RETRIEVAL_CSV)
+    # analyze_metrics(NEAREST_RETRIEVAL_CSV)
 
     # plot_precision_recall_curve()
+
+
+    # violin_plot_metrics(metric_csv=EVAL_3D_RE_CSV)

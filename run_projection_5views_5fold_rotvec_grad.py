@@ -263,7 +263,7 @@ def run_emopt(TagID, phase):
             emopt.anistropicRowScale2ScalesAndTransVecs()      
         print("iteration: {}, real Root Mean Squared Surface Distance(mm): {:.4f}".format(it, computeRMSE(emopt.X_trans, X_Ref)))
 
-        # # 保存用于phase2的初始变量
+        # 保存用于phase2的初始变量
         # emopt.save_expectation_step_result_with_XRef(stage2initMatFile, X_Ref)
 
         # Stage = 2
@@ -278,6 +278,7 @@ def run_emopt(TagID, phase):
         
         E_loss = []
         for it in range(stageIter[2]):
+            # emopt.maximization_step_5Views(stage=2, step=4, maxiter=maxiter, verbose=False)
             emopt.maximization_step_5Views(stage, step=2, maxiter=maxiter, verbose=False)
             emopt.maximization_step_5Views(stage, step=3, maxiter=maxiter, verbose=False)
             emopt.maximization_step_5Views(stage=3, step=-1, maxiter=maxiter, verbose=False)
@@ -457,21 +458,23 @@ if __name__ == "__main__":
     if len(sys.argv) > 1:
         # phase 1 & 2
         FOLD_IDX = int(sys.argv[1]) # command line argument: Fold_Index
+        # EDGE_MASK_PATH = r"./dataWithPhoto/learning/fold{}/test/label-revised/".format(FOLD_IDX) # reconstruction with ground-truth segmentation
         EDGE_MASK_PATH = r"./dataWithPhoto/learning/fold{}/test/pred-{}/".format(FOLD_IDX, VERSION)
         main(phase=1)
 
     else:
-        # # phase 0
-        # NUM_CPUS = psutil.cpu_count(logical=False)
-        # ray.init(num_cpus=NUM_CPUS, num_gpus=1) #ray(多线程)初始化
-        # for FOLD_IDX in [5,4,3,2,1]:
-        #     EDGE_MASK_PATH = r"./dataWithPhoto/learning/fold{}/test/pred-{}/".format(FOLD_IDX, VERSION)
-        #     main(phase=0)
+        # phase 0
+        NUM_CPUS = psutil.cpu_count(logical=False)
+        ray.init(num_cpus=NUM_CPUS, num_gpus=1) #ray(多线程)初始化
+        for FOLD_IDX in [5,4,3,2,1]:
+            # EDGE_MASK_PATH = r"./dataWithPhoto/learning/fold{}/test/label-revised/".format(FOLD_IDX) # reconstruction with ground-truth segmentation
+            EDGE_MASK_PATH = r"./dataWithPhoto/learning/fold{}/test/pred-{}/".format(FOLD_IDX, VERSION)
+            main(phase=0)
             
 
-        # create demo triangle meshes
-        NUM_CPUS = psutil.cpu_count(logical=False) 
-        ray.init(num_cpus=NUM_CPUS, num_gpus=1) #ray(多线程)初始化
-        ray.get([createAlignedPredMeshes.remote(TagID) for TagID in TagIDs])
+        # # create demo triangle meshes
+        # NUM_CPUS = psutil.cpu_count(logical=False) 
+        # ray.init(num_cpus=NUM_CPUS, num_gpus=1) #ray(多线程)初始化
+        # ray.get([createAlignedPredMeshes.remote(TagID) for TagID in TagIDs])
 
     

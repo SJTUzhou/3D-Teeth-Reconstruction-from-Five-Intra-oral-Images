@@ -85,6 +85,7 @@ def meshProjection(visualizer, tagID):
 
     _color = [0.55, 0.7, 0.85]
     _color = [0.75, 0.75, 0.75]
+    # _color = [1., 0.843, 0.] # 金色
     _alpha = 0.45
 
     upperTeethO3dMsh = o3d.io.read_triangle_mesh(upperTeethObj)
@@ -237,8 +238,7 @@ def meshErrorProjectionWithSelectedTeeth(visualizer, tagID):
 
 
 def color_bar():
-    fig, ax = plt.subplots(figsize=(9,1.5))
-    fig.subplots_adjust(bottom=0.5)
+    fig, ax = plt.subplots(figsize=(12,2))
 
     cmap = mpl.cm.get_cmap("jet")
     norm = mpl.colors.Normalize(vmin=0, vmax=1.8)
@@ -248,25 +248,25 @@ def color_bar():
                                     orientation='horizontal')
     cb.set_label('Alignment Error (mm)',size=16)
     cb.ax.tick_params(labelsize=16)
-    # fig.show()
+
     plt.show()
 
 
 
 def main():
-    TagIDRange = range(0,95) #[26,37,59,66] #range(0, 95)
+    TagIDRange = range(0,95) #[26,37,59,66] 
     vis = o3d.visualization.Visualizer()
     vis.create_window(window_name="Image Screen Shot", visible=True, width=WINDOW_WIDTH, height=WINDOW_HEIGHT)
     opt = vis.get_render_option()
-    # opt.background_color = np.asarray([0, 0, 0])
-    opt.background_color = np.asarray([1, 1, 1])
+    opt.background_color = np.asarray([0, 0, 0])
+    # opt.background_color = np.asarray([1, 1, 1])
     opt.mesh_color_option = o3d.visualization.MeshColorOption.Color # Normal
 
     # vis.run() # block the visualizer
     for tagID in TagIDRange:
-        meshErrorProjectionWithSelectedTeeth(vis, tagID)
+        # meshErrorProjectionWithSelectedTeeth(vis, tagID)
         # meshProjectionWithSelectedTeeth(vis, tagID)
-        # meshProjection(vis, tagID)
+        meshProjection(vis, tagID)
     vis.destroy_window()
 
     
