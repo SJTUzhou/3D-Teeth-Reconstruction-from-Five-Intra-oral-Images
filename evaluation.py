@@ -110,14 +110,14 @@ def violin_plot_metrics(metric_csv):
         "Hausdorff distance (mm)", "Dice similarity coefficient", "Volumetric overlap error (%)"]
     ylims = [(0.,2.5),(0.,2.5),(0.,5.),(0.,1.),(0.,1.)]
 
-    for met,metric_name in enumerate(["RMSD", "ASSD", "HD", "DSC", "VOE"]):
+    for met,metric_name in enumerate(["RMSD", "ASSD", "HD", "DSC", "VOE"]): 
         values_per_tooth = df.groupby("toothID")[metric_name].apply(list).to_list()
         for i,vals in enumerate(values_per_tooth):
             vals = np.array(vals)
             _mask = np.abs(stats.zscore(vals)) < 3.5
             values_per_tooth[i] = vals[_mask]
         seaborn.set(style = 'whitegrid') 
-        axes = seaborn.violinplot(data=values_per_tooth, palette=colors_list)
+        axes = seaborn.violinplot(data=values_per_tooth, palette=colors_list, inner="quart", linewidth=0.8, saturation=0.5)
         axes.set_xticks([y for y in range(len(values_per_tooth))],
                   labels=tooth_names, rotation=90)
         
@@ -127,9 +127,13 @@ def violin_plot_metrics(metric_csv):
         axes.tick_params(axis='both', which='both', labelsize=10)
         fig = plt.gcf()
         fig.set_size_inches(12,4)
-        plt.tight_layout()
-        # fig.savefig('violin_plot_{}.png'.format(metric_name), dpi=300)
-        plt.show()
+        axes.set_position([0.05,0.32,0.92,0.62])
+        plt.savefig('violin_plot_{}.png'.format(metric_name), dpi=300)
+        plt.cla() 
+        plt.clf()
+
+        # plt.tight_layout()
+        # plt.show()
 
 
 def analyze_metrics_per_tooth_type(metric_csv):
@@ -170,19 +174,19 @@ def plot_precision_recall_curve():
     plt.show()
 
 if __name__ == "__main__":
-    # 多线程并行计算三维重建各个Metric
-    NUM_CPUS = psutil.cpu_count(logical=False)
-    ray.init(num_cpus=NUM_CPUS, num_gpus=1) #ray(多线程)初始化
-    metric_DFs = ray.get([evaluation_3D_reconstruction.remote(tagID) for tagID in range(0,95)])
-    df = pd.concat(metric_DFs, ignore_index=True)
-    df.to_csv(EVAL_3D_RE_CSV, mode='a', index=False, header=True)
+    # # 多线程并行计算三维重建各个Metric
+    # NUM_CPUS = psutil.cpu_count(logical=False)
+    # ray.init(num_cpus=NUM_CPUS, num_gpus=1) #ray(多线程)初始化
+    # metric_DFs = ray.get([evaluation_3D_reconstruction.remote(tagID) for tagID in range(0,95)])
+    # df = pd.concat(metric_DFs, ignore_index=True)
+    # df.to_csv(EVAL_3D_RE_CSV, mode='a', index=False, header=True)
 
-    # 保存按牙齿分类的三维重建评估指标
-    df = analyze_metrics_per_tooth_type(EVAL_3D_RE_CSV)
-    df.to_csv(EVAL_3D_RE_STATIS_CSV, index=True, float_format='%.4f')
+    # # 保存按牙齿分类的三维重建评估指标
+    # df = analyze_metrics_per_tooth_type(EVAL_3D_RE_CSV)
+    # df.to_csv(EVAL_3D_RE_STATIS_CSV, index=True, float_format='%.4f')
 
-    # 分析整体的三维重建评估指标
-    analyze_metrics(EVAL_3D_RE_CSV)
+    # # 分析整体的三维重建评估指标
+    # analyze_metrics(EVAL_3D_RE_CSV)
 
     # # 多线程SSM计算SSM评估指标
     # NUM_CPUS = psutil.cpu_count(logical=False)
@@ -200,4 +204,4 @@ if __name__ == "__main__":
     # plot_precision_recall_curve()
 
 
-    # violin_plot_metrics(metric_csv=EVAL_3D_RE_CSV)
+    violin_plot_metrics(metric_csv=EVAL_3D_RE_CSV)
