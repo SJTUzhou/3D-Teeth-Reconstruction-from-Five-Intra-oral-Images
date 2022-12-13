@@ -289,7 +289,8 @@ def updateAbsTransVecs(invParamDF, Mu):
         for j,tID in enumerate(toothIndices):
             rxyz = invRotVecs[i,j]
             invRotMat = RR.from_rotvec(rxyz).as_matrix().T
-            invTx, invTy, invTz = - X_Mu_centroids[tID] + invScales[i,j] * (invTransVecs[i,j] + X_Mu_centroids[tID] - invTransVecShifts[i,j]) @ invRotMat
+            # invTx, invTy, invTz = - X_Mu_centroids[tID] + invScales[i,j] * (invTransVecs[i,j] + X_Mu_centroids[tID] - invTransVecShifts[i,j]) @ invRotMat
+            invTx, invTy, invTz = - X_Mu_centroids[tID] + invTransVecShifts[i,j] + invScales[i,j] * (invTransVecs[i,j] + X_Mu_centroids[tID]) @ invRotMat
             invParamCopy.loc[i,"{}tx".format(tID)] = invTx
             invParamCopy.loc[i,"{}ty".format(tID)] = invTy
             invParamCopy.loc[i,"{}tz".format(tID)] = invTz

@@ -23,7 +23,6 @@ from projection_utils import PHOTO
 print = functools.partial(print, flush=True)
 
 class EMOpt5Views(object):
-    # 使用COBYLA的启发式算法进行优化
     def __init__(self, edgeMasks, photoTypes, visMasks, Mask, Mu, SqrtEigVals, Sigma, PoseCovMats, ScaleCovMat, transVecStd, rotVecStd) -> None:
         self.photoTypes = sorted(photoTypes, key=lambda x:x.value)
         assert self.photoTypes == [PHOTO.UPPER, PHOTO.LOWER, PHOTO.LEFT, PHOTO.RIGHT, PHOTO.FRONTAL]
