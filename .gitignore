@@ -157,6 +157,7 @@ res-2D-3D/
 res/
 
 # old scripts
+unused/
 archive/
 matlab_script/
 
