@@ -7,12 +7,12 @@ from matplotlib import pyplot as plt
 import scipy
 from scipy import stats
 import scipy.io
-import utils
-import projection_utils as proj
+import pcd_mesh_utils
+import recons_eval_metric as metric
 import ray
 import psutil
 import seaborn
-from utils import UPPER_INDICES, LOWER_INDICES
+from ssm_utils import UPPER_INDICES, LOWER_INDICES
 
 
 SSM_DIR = r"./data/cpdGpAlignedData/eigValVec/" 
@@ -38,7 +38,7 @@ def evaluate_SSM(TagID, Mu, Sigma):
     _Sigma = Sigma[Mask]
     _Re_X_Ref = []
     for x_ref, mu, eigVecs in zip(_X_Ref,_Mu,_Sigma):
-        _T = utils.computeTransMatByCorres(x_ref, mu, True)
+        _T = pcd_mesh_utils.computeTransMatByCorres(x_ref, mu, True)
         _sR = _T[:3,:3] # 右乘矩阵
         _t = _T[3,:3]
         Tx_ref = np.matmul(x_ref, _sR) + _t #(1500,3)
@@ -48,10 +48,10 @@ def evaluate_SSM(TagID, Mu, Sigma):
         re_x_ref = np.matmul((re_Tx_ref - _t), np.linalg.inv(_sR)) #(1500,3)
         _Re_X_Ref.append(re_x_ref)
     _Re_X_Ref = np.array(_Re_X_Ref)
-    RMSDs = np.array(utils.computeRMSD(_X_Ref, _Re_X_Ref, return_list=True))
-    ASSDs = np.array(utils.computeASSD(_X_Ref, _Re_X_Ref, return_list=True))
-    HDs = np.array(utils.computeHD(_X_Ref, _Re_X_Ref, return_list=True))
-    Dice_VOE_lst = [utils.computeDiceAndVOE(_x1, _x2, pitch=0.2) for _x1, _x2 in zip(_X_Ref, _Re_X_Ref)]
+    RMSDs = np.array(metric.computeRMSD(_X_Ref, _Re_X_Ref, return_list=True))
+    ASSDs = np.array(metric.computeASSD(_X_Ref, _Re_X_Ref, return_list=True))
+    HDs = np.array(metric.computeHD(_X_Ref, _Re_X_Ref, return_list=True))
+    Dice_VOE_lst = [metric.computeDiceAndVOE(_x1, _x2, pitch=0.2) for _x1, _x2 in zip(_X_Ref, _Re_X_Ref)]
     Dice_VOEs = np.array(Dice_VOE_lst)
     Metrics_array = np.hstack([np.tile(TagID,(len(indices),1)), indices[:,None], RMSDs[:,None], ASSDs[:,None], HDs[:,None], Dice_VOEs])
     df = pd.DataFrame(data=Metrics_array, columns=["tagID", "toothID", "RMSD", "ASSD", "HD", "DSC", "VOE"])
@@ -75,17 +75,17 @@ def evaluation_3D_reconstruction(TagID):
 
     # 相似变换配准后的牙列预测与Ground Truth对比
     with_scale = True
-    T_Upper = utils.computeTransMatByCorres(X_Pred_Upper.reshape(-1,3), X_Ref_Upper.reshape(-1,3), with_scale=with_scale)
-    T_Lower = utils.computeTransMatByCorres(X_Pred_Lower.reshape(-1,3), X_Ref_Lower.reshape(-1,3), with_scale=with_scale)
+    T_Upper = pcd_mesh_utils.computeTransMatByCorres(X_Pred_Upper.reshape(-1,3), X_Ref_Upper.reshape(-1,3), with_scale=with_scale)
+    T_Lower = pcd_mesh_utils.computeTransMatByCorres(X_Pred_Lower.reshape(-1,3), X_Ref_Lower.reshape(-1,3), with_scale=with_scale)
 
     TX_Pred_Upper = np.matmul(X_Pred_Upper, T_Upper[:3,:3]) + T_Upper[3,:3]
     TX_Pred_Lower = np.matmul(X_Pred_Lower, T_Lower[:3,:3]) + T_Lower[3,:3]
     _TX_Pred = np.concatenate([TX_Pred_Upper, TX_Pred_Lower])
 
-    RMSD_T_pred = np.array(utils.computeRMSD(_X_Ref, _TX_Pred, return_list=True))
-    ASSD_T_pred = np.array(utils.computeASSD(_X_Ref, _TX_Pred, return_list=True))
-    HD_T_pred = np.array(utils.computeHD(_X_Ref, _TX_Pred, return_list=True))
-    Dice_VOE_lst = [utils.computeDiceAndVOE(_x_ref, _x_pred, pitch=0.2) for _x_ref, _x_pred in zip(_X_Ref, _TX_Pred)]
+    RMSD_T_pred = np.array(metric.computeRMSD(_X_Ref, _TX_Pred, return_list=True))
+    ASSD_T_pred = np.array(metric.computeASSD(_X_Ref, _TX_Pred, return_list=True))
+    HD_T_pred = np.array(metric.computeHD(_X_Ref, _TX_Pred, return_list=True))
+    Dice_VOE_lst = [metric.computeDiceAndVOE(_x_ref, _x_pred, pitch=0.2) for _x_ref, _x_pred in zip(_X_Ref, _TX_Pred)]
     Dice_VOE_T_pred = np.array(Dice_VOE_lst)
 
     Metrics_array = np.hstack([np.tile(TagID,(len(indices),1)), indices[:,None], RMSD_T_pred[:,None], ASSD_T_pred[:,None], HD_T_pred[:,None], Dice_VOE_T_pred])

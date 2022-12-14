@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 import skimage
 from scipy.spatial.transform import Rotation as RR
 import projection_utils as proj
-import utils
+import pcd_mesh_utils
 from projection_utils import PHOTO, MASK_FRONTAL, MASK_LEFT, MASK_LOWER, MASK_RIGHT, MASK_UPPER
 
 
@@ -126,8 +126,8 @@ def meshProjectionWithSelectedTeeth(visualizer, tagID):
         X_Pred_Lower = grp["LOWER_PRED"][:]
         Mask = np.array(grp["MASK"][:], dtype=np.bool_)
 
-    upperMeshList = [utils.surfaceVertices2WatertightO3dMesh(x) for x in X_Pred_Upper]
-    lowerMeshList = [utils.surfaceVertices2WatertightO3dMesh(x) for x in X_Pred_Lower]
+    upperMeshList = [pcd_mesh_utils.surfaceVertices2WatertightO3dMesh(x) for x in X_Pred_Upper]
+    lowerMeshList = [pcd_mesh_utils.surfaceVertices2WatertightO3dMesh(x) for x in X_Pred_Lower]
     numUpperT = len(upperMeshList)
     
     ex_rxyz, ex_txyz, focLth, dpix, u0, v0, rela_R, rela_t = proj.readCameraParamsFromH5(h5File=demoH5File, patientId=tagID)
@@ -140,8 +140,8 @@ def meshProjectionWithSelectedTeeth(visualizer, tagID):
 
     for phType, phMask, img in zip(PHOTO_ORDER, PHOTO_MASKS, photos):
         visMask = phMask[Mask]
-        upperTeethO3dMsh = utils.mergeO3dTriangleMeshes([_msh for _msh,_vm in zip(upperMeshList,visMask[:numUpperT]) if _vm==True])
-        lowerTeethO3dMsh = utils.mergeO3dTriangleMeshes([_msh for _msh,_vm in zip(lowerMeshList,visMask[numUpperT:]) if _vm==True])
+        upperTeethO3dMsh = pcd_mesh_utils.mergeO3dTriangleMeshes([_msh for _msh,_vm in zip(upperMeshList,visMask[:numUpperT]) if _vm==True])
+        lowerTeethO3dMsh = pcd_mesh_utils.mergeO3dTriangleMeshes([_msh for _msh,_vm in zip(lowerMeshList,visMask[numUpperT:]) if _vm==True])
         if phType != PHOTO.LOWER:
             upperTeethO3dMsh.paint_uniform_color(_color)
             upperTeethO3dMsh.compute_vertex_normals()
@@ -197,11 +197,11 @@ def meshErrorProjectionWithSelectedTeeth(visualizer, tagID):
     fx = focLth / dpix
 
     with_scale = True
-    T_Upper = utils.computeTransMatByCorres(X_Pred_Upper.reshape(-1,3), X_Ref_Upper.reshape(-1,3), with_scale=with_scale)
-    T_Lower = utils.computeTransMatByCorres(X_Pred_Lower.reshape(-1,3), X_Ref_Lower.reshape(-1,3), with_scale=with_scale)
+    T_Upper = pcd_mesh_utils.computeTransMatByCorres(X_Pred_Upper.reshape(-1,3), X_Ref_Upper.reshape(-1,3), with_scale=with_scale)
+    T_Lower = pcd_mesh_utils.computeTransMatByCorres(X_Pred_Lower.reshape(-1,3), X_Ref_Lower.reshape(-1,3), with_scale=with_scale)
 
-    upperMeshList = [utils.surfaceVertices2WatertightO3dMesh(x) for x in X_Pred_Upper]
-    lowerMeshList = [utils.surfaceVertices2WatertightO3dMesh(x) for x in X_Pred_Lower]
+    upperMeshList = [pcd_mesh_utils.surfaceVertices2WatertightO3dMesh(x) for x in X_Pred_Upper]
+    lowerMeshList = [pcd_mesh_utils.surfaceVertices2WatertightO3dMesh(x) for x in X_Pred_Lower]
     numUpperT = len(upperMeshList)
 
     upperColors = []
@@ -218,8 +218,8 @@ def meshErrorProjectionWithSelectedTeeth(visualizer, tagID):
     _PHOTO_MASKS = [np.ones((28,),dtype=np.bool_)] * 5
     for phType, phMask in zip(PHOTO_ORDER, _PHOTO_MASKS):
         visMask = phMask[Mask]
-        upperTeethO3dMsh = utils.mergeO3dTriangleMeshes([_msh for _msh,_vm in zip(upperMeshList,visMask[:numUpperT]) if _vm==True])
-        lowerTeethO3dMsh = utils.mergeO3dTriangleMeshes([_msh for _msh,_vm in zip(lowerMeshList,visMask[numUpperT:]) if _vm==True])
+        upperTeethO3dMsh = pcd_mesh_utils.mergeO3dTriangleMeshes([_msh for _msh,_vm in zip(upperMeshList,visMask[:numUpperT]) if _vm==True])
+        lowerTeethO3dMsh = pcd_mesh_utils.mergeO3dTriangleMeshes([_msh for _msh,_vm in zip(lowerMeshList,visMask[numUpperT:]) if _vm==True])
         if phType != PHOTO.LOWER:
             upperTeethO3dMsh.compute_vertex_normals()
             _colors = np.vstack([_c for _c,_m in zip(upperColors, visMask[:numUpperT]) if _m==True])

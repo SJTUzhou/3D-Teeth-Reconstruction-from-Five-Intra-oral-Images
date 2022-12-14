@@ -29,7 +29,7 @@ class EMOpt5Views(object):
         for v in self.edgeMask:
             p_true = np.argwhere(v>0)[:,::-1].astype(np.float64)
             # self.P_true.append(np.ascontiguousarray(p_true, np.float64))
-            num_point_sampled = min(4000, len(p_true))
+            num_point_sampled = min(3000, len(p_true))
             ds_p_true = emopt_func.farthestPointDownSample(p_true, num_point_sampled)
             self.P_true.append(np.ascontiguousarray(ds_p_true, np.float64))
 

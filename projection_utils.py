@@ -5,12 +5,11 @@ import enum
 import pandas as pd
 import open3d as o3d
 from matplotlib import pyplot as plt
-import scipy.io
-import utils
 import skimage
 from scipy.spatial.transform import Rotation as RR
 import h5py
-from utils import LOWER_INDICES, UPPER_INDICES
+import ssm_utils
+from ssm_utils import LOWER_INDICES, UPPER_INDICES
 
 
 
@@ -170,14 +169,14 @@ def loadInvRegistrationParams(loadDir):
     toothIndices = UPPER_INDICES + LOWER_INDICES
     paramDF = pd.DataFrame(columns=["tag"])
     # 下牙列逆配准参数
-    tags, rowScales, transVecShifts = utils.readToothRowScalesFromHDF5(os.path.join(loadDir, "scalesOfLowerToothRow.hdf5"), "L")
+    tags, rowScales, transVecShifts = ssm_utils.readToothRowScalesFromHDF5(os.path.join(loadDir, "scalesOfLowerToothRow.hdf5"), "L")
     indexTag = [int(tag[:-1]) for tag in tags]
     invScales = [1./s for s in rowScales]
     invTransVecShifts = -transVecShifts
     tempDF = pd.DataFrame({"tag":indexTag,"lower_s":list(invScales), "lower_ts":list(invTransVecShifts)})
     paramDF = paramDF.merge(tempDF, how="outer", on="tag")
     # 上牙列逆配准参数
-    tags, rowScales, transVecShifts = utils.readToothRowScalesFromHDF5(os.path.join(loadDir, "scalesOfUpperToothRow.hdf5"), "U")
+    tags, rowScales, transVecShifts = ssm_utils.readToothRowScalesFromHDF5(os.path.join(loadDir, "scalesOfUpperToothRow.hdf5"), "U")
     indexTag = [int(tag[:-1]) for tag in tags]
     invScales = [1./s for s in rowScales]
     invTransVecShifts = -transVecShifts
@@ -186,7 +185,7 @@ def loadInvRegistrationParams(loadDir):
     # 牙齿统计形状逆配准参数
     for i in toothIndices:
         h5File = os.path.join(loadDir, "sRtParams_{}.hdf5".format(i))
-        tags, scales, rotMats, transVecs = utils.readRegistrationParamsFromHDF5(h5File, i)
+        tags, scales, rotMats, transVecs = ssm_utils.readRegistrationParamsFromHDF5(h5File, i)
         indexTag = [int(tag[:-1]) for tag in tags]
         invRotVecs = RR.from_matrix(rotMats).as_rotvec() # 两次求逆（转置）相互抵消
         invScales = 1./scales
@@ -327,7 +326,7 @@ def GetPoseCovMats(invParamDF, toothIndices):
         covA = np.ma.cov(np.ma.masked_invalid(A), rowvar=False)
         assert not covA.mask.any() #检查是否有nan
         covMat = covA.data
-        assert utils.is_pos_def(covMat)
+        assert ssm_utils.is_pos_def(covMat)
         # variances = np.ma.var(np.ma.masked_invalid(A), axis=0, ddof=1)
         # assert not variances.mask.any() #检查是否有nan
         # std = np.sqrt(variances.data)
@@ -343,7 +342,7 @@ def GetScaleCovMat(invParamDF, toothIndices):
     covA = np.ma.cov(np.ma.masked_invalid(A), rowvar=False)
     assert not covA.mask.any() #检查是否有nan
     covMat = covA.data
-    assert utils.is_pos_def(covMat)
+    assert ssm_utils.is_pos_def(covMat)
     return covMat
 
 

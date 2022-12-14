@@ -1,8 +1,9 @@
 import os
-from re import M
 import numpy as np
 import pandas as pd
-import utils
+import pcd_mesh_utils
+import recons_eval_metric as metric
+from ssm_utils import UPPER_INDICES, LOWER_INDICES
 import projection_utils as proj
 import ray
 import psutil
@@ -16,7 +17,7 @@ MASK_NPY = os.path.join(REF_DIR, "X_mask.npy")
 PG_SHAPE = (1500,3)
 NUM_SSM_SAMPLE = 130
 NEAREST_RETRIEVAL_CSV = r"./dataWithPhoto/_temp/evaluation_nearest_retrieval.csv"
-TOOTH_INDICES = utils.UPPER_INDICES + utils.LOWER_INDICES
+TOOTH_INDICES = UPPER_INDICES + LOWER_INDICES
 
 def loadSSMDataSet(pgShape=PG_SHAPE, srcDir=SRC_DIR):
     pgsU = []
@@ -65,27 +66,27 @@ def nearest_retrieval(tagID, ssmPgActor):
             continue # exists missing teeth in i-th SSM sample compared with ref Pg
         _pgU = pgU[Mask_U]
         _pgL = pgL[Mask_L]
-        T_Upper = utils.computeTransMatByCorres(_pgU.reshape(-1,3), X_Ref_U.reshape(-1,3), with_scale=False)
-        T_Lower = utils.computeTransMatByCorres(_pgL.reshape(-1,3), X_Ref_L.reshape(-1,3), with_scale=False)
+        T_Upper = pcd_mesh_utils.computeTransMatByCorres(_pgU.reshape(-1,3), X_Ref_U.reshape(-1,3), with_scale=False)
+        T_Lower = pcd_mesh_utils.computeTransMatByCorres(_pgL.reshape(-1,3), X_Ref_L.reshape(-1,3), with_scale=False)
         T_pgU = np.matmul(_pgU, T_Upper[:3,:3]) + T_Upper[3,:3]
         T_pgL = np.matmul(_pgL, T_Lower[:3,:3]) + T_Lower[3,:3]
-        rmse = utils.computeRMSE(X_Ref, np.concatenate([T_pgU,T_pgL]))
+        rmse = metric.computeRMSE(X_Ref, np.concatenate([T_pgU,T_pgL]))
         RMSEs.append(rmse)
     
     j = np.argmin(RMSEs)
     pgU, pgL, maskU, maskL = ray.get(ssmPgActor.getPgMask.remote(j))
     _pgU = pgU[Mask_U]
     _pgL = pgL[Mask_L]
-    T_Upper = utils.computeTransMatByCorres(_pgU.reshape(-1,3), X_Ref_U.reshape(-1,3), with_scale=True)
-    T_Lower = utils.computeTransMatByCorres(_pgL.reshape(-1,3), X_Ref_L.reshape(-1,3), with_scale=True)
+    T_Upper = pcd_mesh_utils.computeTransMatByCorres(_pgU.reshape(-1,3), X_Ref_U.reshape(-1,3), with_scale=True)
+    T_Lower = pcd_mesh_utils.computeTransMatByCorres(_pgL.reshape(-1,3), X_Ref_L.reshape(-1,3), with_scale=True)
     T_pgU = np.matmul(_pgU, T_Upper[:3,:3]) + T_Upper[3,:3]
     T_pgL = np.matmul(_pgL, T_Lower[:3,:3]) + T_Lower[3,:3]
     T_pg = np.concatenate([T_pgU,T_pgL])
 
-    RMSDs = np.array(utils.computeRMSD(X_Ref, T_pg, return_list=True))
-    ASSDs = np.array(utils.computeASSD(X_Ref, T_pg, return_list=True))
-    HDs = np.array(utils.computeHD(X_Ref, T_pg, return_list=True))
-    Dice_VOE_lst = [utils.computeDiceAndVOE(_x1, _x2, pitch=0.2) for _x1, _x2 in zip(X_Ref, T_pg)]
+    RMSDs = np.array(metric.computeRMSD(X_Ref, T_pg, return_list=True))
+    ASSDs = np.array(metric.computeASSD(X_Ref, T_pg, return_list=True))
+    HDs = np.array(metric.computeHD(X_Ref, T_pg, return_list=True))
+    Dice_VOE_lst = [metric.computeDiceAndVOE(_x1, _x2, pitch=0.2) for _x1, _x2 in zip(X_Ref, T_pg)]
     Dice_VOEs = np.array(Dice_VOE_lst)
 
     Metrics_array = np.hstack([np.tile(tagID,(len(indices),1)), indices[:,None], RMSDs[:,None], ASSDs[:,None], HDs[:,None], Dice_VOEs])

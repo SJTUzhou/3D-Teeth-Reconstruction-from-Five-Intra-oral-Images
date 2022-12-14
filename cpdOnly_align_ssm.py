@@ -1,19 +1,14 @@
 import cycpd
-import matplotlib.pyplot as plt
 # import pycpd
 import numpy as np
 import scipy
 import os
 import glob
-import shutil
-import open3d as o3d
 import time
 import ray
 import psutil
-import h5py
-from utils import farthestPointDownSample, fixedNumDownSample, getRotAngles, saveAlignedPointGroups2Txt, loadAlignedPointGroupsWithIndex, getEigValVecOfSSMByPCA, \
-    remainedInfoRatio, saveRegistrationParams2Hdf5, readRegistrationParamsFromHDF5, printPlotRegistrationParams, getRotMat, showPointCloud
-
+from pcd_mesh_utils import farthestPointDownSample, fixedNumDownSample, voxelDownSample
+from ssm_utils import * 
 
 def zeroCentered(X):
     return X-np.mean(X,axis=0)

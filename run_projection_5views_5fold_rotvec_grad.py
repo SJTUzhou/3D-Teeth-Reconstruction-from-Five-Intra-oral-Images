@@ -3,12 +3,8 @@ import sys
 import numpy as np
 import pandas as pd
 import csv
-import open3d as o3d
-from matplotlib import pyplot as plt
-import scipy
-import scipy.io
-import utils
-from utils import computeRMSE, computeRMSD, computeASSD, computeHD
+import pcd_mesh_utils as pm_util
+import recons_eval_metric as metric
 import projection_utils as proj
 import functools
 import ray
@@ -52,7 +48,7 @@ STAGE0_MAT_DIR = os.path.join(MATLAB_PATH, "stage0-mat")
 DEMO_H5_DIR = r"./dataWithPhoto/demo/"
 DEMO_MESH_DIR = r"./dataWithPhoto/demoMesh/"
 NAME_IDX_CSV = pd.read_csv(NAME_IDX_MAP_CSV)
-
+TEMP_DIR = r"./dataWithPhoto/_temp/"
 LOG_DIR = r"./dataWithPhoto/log/"
 print = functools.partial(print, flush=True)
 
@@ -99,12 +95,12 @@ def meanShapeAlignmentEvaluation(with_scale=False):
         mask = np.squeeze(masks[i])
         mask_U, mask_L = np.split(mask, 2, axis=0)
         pg_U, pg_L = np.split(pg, 2, axis=0)
-        TransMat_U = utils.computeTransMatByCorres(Mu_U[mask_U].reshape(-1,3), pg_U[mask_U].reshape(-1,3), with_scale)
-        TransMat_L = utils.computeTransMatByCorres(Mu_L[mask_L].reshape(-1,3), pg_L[mask_L].reshape(-1,3), with_scale)
+        TransMat_U = pm_util.computeTransMatByCorres(Mu_U[mask_U].reshape(-1,3), pg_U[mask_U].reshape(-1,3), with_scale)
+        TransMat_L = pm_util.computeTransMatByCorres(Mu_L[mask_L].reshape(-1,3), pg_L[mask_L].reshape(-1,3), with_scale)
         T_Mu_U = np.matmul(Mu_U[mask_U], TransMat_U[:3,:3]) + TransMat_U[3,:3]
         T_Mu_L = np.matmul(Mu_L[mask_L], TransMat_L[:3,:3]) + TransMat_L[3,:3]
-        rmse1 = computeRMSE(T_Mu_U, pg_U[mask_U])
-        rmse2 = computeRMSE(T_Mu_L, pg_L[mask_L])
+        rmse1 = metric.computeRMSE(T_Mu_U, pg_U[mask_U])
+        rmse2 = metric.computeRMSE(T_Mu_L, pg_L[mask_L])
         rmses.append(rmse1)
         rmses.append(rmse2)
     print("with_scale: ", with_scale)
@@ -113,48 +109,17 @@ def meanShapeAlignmentEvaluation(with_scale=False):
 
 
 
-def run_emopt(TagID, phase):
+def run_emopt(TagID, emopt, X_Ref, phase):
     # phase 0: grid search parallelled by Ray
     # phase 1: stage 0,1,2,3 optimization by scipy
 
     print("TagID: ", TagID)
-
-    # 顺序相互对应
-    photo_types = ["upperPhoto","lowerPhoto","leftPhoto","rightPhoto","frontalPhoto"]
-    edgeMasks = proj.getEdgeMask(EDGE_MASK_PATH, NAME_IDX_CSV, TagID, photo_types, resized_width=800, binary=True, activation_thre=0.1)
-    # proj.visualizeEdgeMasks(edgeMasks, photo_types)
-
-    Mu, SqrtEigVals, Sigma = proj.loadMuEigValSigma(SSM_DIR, numPC=NUM_PC)
-
-    invRegistrationParamDF = proj.loadInvRegistrationParams(loadDir=PARAM_DIR) # 加载配准过程中的参数
-    invParamDF = proj.updateAbsTransVecs(invRegistrationParamDF, Mu) # 将牙列scale转化为每颗牙齿的位移，将每颗牙齿的transVecXYZs在局部坐标系下进行表达
-
-    invScaleMeans, invScaleVars, invRotVecXYZMeans, invRotVecXYZVars, invTransVecXYZMeans, invTransVecXYZVars = proj.getMeanAndVarianceOfInvRegistrationParams(invParamDF)
-    scaleStds = np.sqrt(invScaleVars)
-    transVecStds = np.sqrt(invTransVecXYZVars)
-    rotVecStds = np.sqrt(invRotVecXYZVars)
-    print("scaleStd: {:.4f}, transVecStd: {:.4f}, rotVecStd: {:.4f}".format(scaleStds.mean(), transVecStds.mean(), rotVecStds.mean()))
-
-    PoseCovMats = proj.GetPoseCovMats(invParamDF, toothIndices=UPPER_INDICES+LOWER_INDICES) # 每个位置的牙齿的6个变换参数的协方差矩阵,shape=(28,6,6)
-    ScaleCovMat = proj.GetScaleCovMat(invParamDF, toothIndices=UPPER_INDICES+LOWER_INDICES) # 牙齿scale的协方差矩阵,shape=(28,28)
-    
-    Mask = proj.GetMaskByTagId(MASK_NPY, TagId=TagID)
-    # reference pointcloud
-    PG_Ref = proj.GetPGByTagId(PG_NPY, TagId=TagID)
-    X_Ref = PG_Ref[Mask]
-
     # Optimization
-
     print("-"*100)
     print("Start optimization.")
-    # 初始化
-    photoTypes = [PHOTO.UPPER, PHOTO.LOWER, PHOTO.LEFT, PHOTO.RIGHT, PHOTO.FRONTAL]
-    VISIBLE_MASKS = [proj.MASK_UPPER, proj.MASK_LOWER, proj.MASK_LEFT, proj.MASK_RIGHT, proj.MASK_FRONTAL]
-    emopt = EMOpt5Views(edgeMasks, photoTypes, VISIBLE_MASKS, Mask, Mu, SqrtEigVals, Sigma, PoseCovMats, ScaleCovMat, transVecStds.mean(), rotVecStds.mean())
 
     stage0initMatFile = os.path.join(STAGE0_MAT_DIR, "E-step-result-stage0-init-{}.mat".format(TagID))
     stage0finalMatFile = os.path.join(STAGE0_MAT_DIR, "TEMP-E-step-result-stage0-final.mat")
-    # stage2initMatFile = os.path.join(STAGE0_MAT_DIR, "E-step-result-stage2-init-{}.mat".format(TagID))
 
     # phase 0: grid search parallelled by Ray
     if phase == 0:
@@ -167,9 +132,9 @@ def run_emopt(TagID, phase):
         print("focal length: ", emopt.focLth)
         print("d_pixel: ", emopt.dpix)
         print("u0: {}, v0: {}".format(emopt.u0, emopt.v0))
-        print("[RMSE] Root Mean Squared Surface Distance(mm): {:.4f}".format(computeRMSE(emopt.X_trans, X_Ref)))
-        print("[ASSD] average symmetric surface distance (mm): {:.4f}".format(computeASSD(emopt.X_trans, X_Ref)))
-        print("[HD] Hausdorff distance (mm): {:.4f}".format(computeHD(emopt.X_trans, X_Ref)))
+        print("[RMSE] Root Mean Squared Surface Distance(mm): {:.4f}".format(metric.computeRMSE(emopt.X_trans, X_Ref)))
+        print("[ASSD] average symmetric surface distance (mm): {:.4f}".format(metric.computeASSD(emopt.X_trans, X_Ref)))
+        print("[HD] Hausdorff distance (mm): {:.4f}".format(metric.computeHD(emopt.X_trans, X_Ref)))
 
 
         print("-"*100)
@@ -187,10 +152,8 @@ def run_emopt(TagID, phase):
         print("focal length: ", emopt.focLth)
         print("d_pixel: ", emopt.dpix)
         print("u0: {}, v0: {}".format(emopt.u0, emopt.v0))
-        emopt.expectation_step_5Views(verbose=True)
+        emopt.expectation_step_5Views(-1, verbose=True)
 
-
-        
         emopt.save_expectation_step_result_with_XRef(stage0initMatFile, X_Ref)
 
 
@@ -205,17 +168,17 @@ def run_emopt(TagID, phase):
         # Continue from checkpoint "E-step-result-stage0-init-{}.mat"
         stage = 0
         emopt.load_expectation_step_result(stage0initMatFile, stage)
-        emopt.expectation_step_5Views(verbose=True)
-        print("Root Mean Squared Surface Distance(mm): {:.4f}".format(computeRMSE(emopt.X_trans, X_Ref)))        
+        emopt.expectation_step_5Views(stage, verbose=True)
+        print("Root Mean Squared Surface Distance(mm): {:.4f}".format(metric.computeRMSE(emopt.X_trans, X_Ref)))        
         E_loss = []
         for it in range(stageIter[0]):
             emopt.maximization_step_5Views(stage, step=-1, maxiter=maxiter, verbose=False)
 
             print("M-step loss: {:.4f}".format(emopt.loss_maximization_step))
-            emopt.expectation_step_5Views(verbose=True)
+            emopt.expectation_step_5Views(stage, verbose=True)
             e_loss = np.sum(emopt.weightViews * emopt.loss_expectation_step)
             print("Sum of expectation step loss: {:.4f}".format(e_loss))
-            print("iteration: {}, real Root Mean Squared Surface Distance(mm): {:.4f}".format(it, computeRMSE(emopt.X_trans, X_Ref)))
+            print("iteration: {}, real Root Mean Squared Surface Distance(mm): {:.4f}".format(it, metric.computeRMSE(emopt.X_trans, X_Ref)))
             if len(E_loss)>=2 and e_loss>=np.mean(E_loss[-2:]):
                 print("Early stop with last 3 e-step loss {:.4f}, {:.4f}, {:.4f}".format(E_loss[-2],E_loss[-1],e_loss))
                 E_loss.append(e_loss)
@@ -235,10 +198,10 @@ def run_emopt(TagID, phase):
             emopt.maximization_step_5Views(stage, step=-1, maxiter=maxiter, verbose=False)
 
             print("M-step loss: {:.4f}".format(emopt.loss_maximization_step))
-            emopt.expectation_step_5Views(verbose=True)
+            emopt.expectation_step_5Views(stage, verbose=True)
             e_loss = np.sum(emopt.weightViews * emopt.loss_expectation_step)
             print("Sum of expectation step loss: {:.4f}".format(e_loss))
-            print("iteration: {}, real Root Mean Squared Surface Distance(mm): {:.4f}".format(it, computeRMSE(emopt.X_trans, X_Ref)))
+            print("iteration: {}, real Root Mean Squared Surface Distance(mm): {:.4f}".format(it, metric.computeRMSE(emopt.X_trans, X_Ref)))
             if e_loss >= E_loss[-1]: # len(E_loss)>=2 and e_loss>=np.mean(E_loss[-2:]):
                 # 判断条件1：是否跳过stage1
                 if it == 0:
@@ -257,23 +220,18 @@ def run_emopt(TagID, phase):
             print("Skip Stage 1; Reverse to Stage 0 final result.")
             emopt.rowScaleXZ = np.ones((2,))
             emopt.load_expectation_step_result(stage0finalMatFile, stage=2)
-            emopt.expectation_step_5Views(verbose=True)
+            emopt.expectation_step_5Views(stage, verbose=True)
         else:
             print("Accept Stage 1.")
             emopt.anistropicRowScale2ScalesAndTransVecs()      
-        print("iteration: {}, real Root Mean Squared Surface Distance(mm): {:.4f}".format(it, computeRMSE(emopt.X_trans, X_Ref)))
-
-        # 保存用于phase2的初始变量
-        # emopt.save_expectation_step_result_with_XRef(stage2initMatFile, X_Ref)
+        print("iteration: {}, real Root Mean Squared Surface Distance(mm): {:.4f}".format(it, metric.computeRMSE(emopt.X_trans, X_Ref)))
 
         # Stage = 2
         print("-"*100)
         print("Start Stage 2.")
         stage = 2
 
-        # # load previous data
-        # emopt.load_expectation_step_result(stage2initMatFile, stage)
-        emopt.expectation_step_5Views(verbose=True)
+        emopt.expectation_step_5Views(stage, verbose=True)
 
         
         E_loss = []
@@ -284,10 +242,10 @@ def run_emopt(TagID, phase):
             emopt.maximization_step_5Views(stage=3, step=-1, maxiter=maxiter, verbose=False)
             emopt.maximization_step_5Views(stage, step=1, maxiter=maxiter, verbose=False)
             print("M-step loss: {:.4f}".format(emopt.loss_maximization_step))
-            emopt.expectation_step_5Views(verbose=True)
+            emopt.expectation_step_5Views(stage=3, verbose=True)
             e_loss = np.sum(emopt.weightViews * emopt.loss_expectation_step)
             print("Sum of expectation step loss: {:.4f}".format(e_loss))
-            print("iteration: {}, real Root Mean Squared Surface Distance(mm): {:.4f}".format(it, computeRMSE(emopt.X_trans, X_Ref)))
+            print("iteration: {}, real Root Mean Squared Surface Distance(mm): {:.4f}".format(it, metric.computeRMSE(emopt.X_trans, X_Ref)))
             if len(E_loss)>=2 and (e_loss>=np.mean(E_loss[-2:])):
                 print("Early stop with last 3 e-step loss {:.4f}, {:.4f}, {:.4f}".format(E_loss[-2],E_loss[-1],e_loss))
                 break
@@ -295,99 +253,49 @@ def run_emopt(TagID, phase):
                 E_loss.append(e_loss)
 
 
-        print("[RMSE] Root Mean Squared Surface Distance(mm): {:.4f}".format(computeRMSE(X_Ref, emopt.X_trans)))
-        print("[ASSD] average symmetric surface distance (mm): {:.4f}".format(computeASSD(X_Ref, emopt.X_trans)))
-        print("[HD] Hausdorff distance (mm): {:.4f}".format(computeHD(X_Ref, emopt.X_trans)))
-
-
-        print("-"*100)
-        print("Evaluation.")
-
-        invRotVecXYZVars = invRotVecXYZVars.reshape(-1,3)
-        invTransVecXYZVars = invTransVecXYZVars.reshape(-1,3)
-        print("standard transVecXYZs:")
-        print((emopt.transVecXYZs - emopt.meanTransVecXYZs) / np.sqrt(invTransVecXYZVars[Mask]))
-        print("standard rotVecXYZs:")
-        print((emopt.rotVecXYZs - emopt.meanRotVecXYZs) / np.sqrt(invRotVecXYZVars[Mask]))
-        print("scales:")
-        print(emopt.scales)
-        print("feature vectors:")
-        print(emopt.featureVec)
-
-        # 不考虑第二磨牙
-        withoutSecondMolarMask = np.tile(np.array([1,1,1,1,1,1,0],dtype=np.bool_),(4,))
-        print("Without Second Molar, Root Mean Squared Surface Distance(mm): {:.4f}".format(computeRMSE(emopt.X_trans[withoutSecondMolarMask[Mask]], X_Ref[withoutSecondMolarMask[Mask]])))
-
-        # Save Demo Result
-
-        demoH5File = os.path.join(DEMO_H5_DIR, "demo_TagID={}.h5".format(TagID))
-        emopt.saveDemo2H5(demoH5File, TagID, X_Ref)
+        # print("[RMSE] Root Mean Squared Surface Distance(mm): {:.4f}".format(metric.computeRMSE(X_Ref, emopt.X_trans)))
+        # print("[ASSD] average symmetric surface distance (mm): {:.4f}".format(metric.computeASSD(X_Ref, emopt.X_trans)))
+        # print("[HD] Hausdorff distance (mm): {:.4f}".format(metric.computeHD(X_Ref, emopt.X_trans)))
+        
+    return emopt
 
 
 
-def evaluation(TagID):
+def evaluation(TagID, demoh5File, ret_csv):
     print("TagID: ", TagID)
     patientID = TagID
-    demoH5File2Load = os.path.join(DEMO_H5_DIR, "demo_TagID={}.h5".format(patientID))
-    X_Mu_Upper, X_Mu_Lower, X_Pred_Upper, X_Pred_Lower, X_Ref_Upper, X_Ref_Lower, rela_R, rela_t = proj.readDemoFromH5(demoH5File2Load, patientID)
+    X_Mu_Upper, X_Mu_Lower, X_Pred_Upper, X_Pred_Lower, X_Ref_Upper, X_Ref_Lower, rela_R, rela_t = proj.readDemoFromH5(demoh5File, patientID)
     _X_Ref = np.concatenate([X_Ref_Upper,X_Ref_Lower])
-    _X_Mu = np.concatenate([X_Mu_Upper,X_Mu_Lower])
-    _X_Pred = np.concatenate([X_Pred_Upper,X_Pred_Lower])
-
-    # 牙列均值与Ground Truth对比
-    print("Compare Mean shape with ground truth.")
-    print("[RMSE] Root Mean Squared Error of corresponding points (mm): {:.4f}".format(computeRMSE(_X_Ref, _X_Mu)))
-    print("[RMSD] Root Mean Squared surface Distance (mm): {:.4f}".format(computeRMSD(_X_Ref, _X_Mu)))
-    print("[ASSD] average symmetric surface distance (mm): {:.4f}".format(computeASSD(_X_Ref, _X_Mu)))
-    print("[HD] Hausdorff distance (mm): {:.4f}".format(computeHD(_X_Ref, _X_Mu)))
-
-
-    # 牙列预测与Ground Truth对比
-    print("Compare prediction shape with ground truth.")
-    RMSE_pred = computeRMSE(_X_Ref, _X_Pred)
-    RMSD_pred = computeRMSD(_X_Ref, _X_Pred)
-    ASSD_pred = computeASSD(_X_Ref, _X_Pred)
-    HD_pred = computeHD(_X_Ref, _X_Pred)
-    print("[RMSE] Root Mean Squared Error of corresponding points (mm): {:.4f}".format(RMSE_pred))
-    print("[RMSD] Root Mean Squared surface Distance (mm): {:.4f}".format(RMSD_pred))
-    print("[ASSD] average symmetric surface distance (mm): {:.4f}".format(ASSD_pred))
-    print("[HD] Hausdorff distance (mm): {:.4f}".format(HD_pred))
-
-    # # 上下牙列咬合时的相对位置的预测
-    # X_assem = np.concatenate([X_Pred_Upper, np.matmul(X_Pred_Lower, rela_R)+rela_t], axis=0)
-    # utils.showPointCloud(X_assem.reshape(-1,3), "上下牙列咬合时的相对位置关系的预测")
 
     # 相似变换配准后的牙列预测与Ground Truth对比
     print("Compare prediction shape aligned by similarity registration with ground truth.")
     with_scale = True
-    T_Upper = utils.computeTransMatByCorres(X_Pred_Upper.reshape(-1,3), X_Ref_Upper.reshape(-1,3), with_scale=with_scale)
-    T_Lower = utils.computeTransMatByCorres(X_Pred_Lower.reshape(-1,3), X_Ref_Lower.reshape(-1,3), with_scale=with_scale)
+    T_Upper = pm_util.computeTransMatByCorres(X_Pred_Upper.reshape(-1,3), X_Ref_Upper.reshape(-1,3), with_scale=with_scale)
+    T_Lower = pm_util.computeTransMatByCorres(X_Pred_Lower.reshape(-1,3), X_Ref_Lower.reshape(-1,3), with_scale=with_scale)
 
     TX_Pred_Upper = np.matmul(X_Pred_Upper, T_Upper[:3,:3]) + T_Upper[3,:3]
     TX_Pred_Lower = np.matmul(X_Pred_Lower, T_Lower[:3,:3]) + T_Lower[3,:3]
     _TX_Pred = np.concatenate([TX_Pred_Upper, TX_Pred_Lower])
 
-    RMSE_T_pred = computeRMSE(_X_Ref, _TX_Pred)
-    RMSD_T_pred = computeRMSD(_X_Ref, _TX_Pred)
-    ASSD_T_pred = computeASSD(_X_Ref, _TX_Pred)
-    HD_T_pred = computeHD(_X_Ref, _TX_Pred)
-    print("[RMSE] Root Mean Squared Error of corresponding points (mm): {:.4f}".format(RMSE_T_pred))
+    RMSD_T_pred = metric.computeRMSD(_X_Ref, _TX_Pred)
+    ASSD_T_pred = metric.computeASSD(_X_Ref, _TX_Pred)
+    HD_T_pred = metric.computeHD(_X_Ref, _TX_Pred)
+    CD_T_pred = metric.computeChamferDistance(_X_Ref, _TX_Pred)
     print("[RMSD] Root Mean Squared surface Distance (mm): {:.4f}".format(RMSD_T_pred))
     print("[ASSD] average symmetric surface distance (mm): {:.4f}".format(ASSD_T_pred))
     print("[HD] Hausdorff distance (mm): {:.4f}".format(HD_T_pred))
+    print("[CD] Chamfer distance (mm^2): {:.4f}".format(CD_T_pred))
 
-
-    Dice_VOE_lst = [utils.computeDiceAndVOE(_x_ref, _x_pred, pitch=0.2) for _x_ref, _x_pred in zip(_X_Ref, _TX_Pred)]
+    Dice_VOE_lst = [metric.computeDiceAndVOE(_x_ref, _x_pred, pitch=0.2) for _x_ref, _x_pred in zip(_X_Ref, _TX_Pred)]
     avg_Dice, avg_VOE = np.array(Dice_VOE_lst).mean(axis=0)
     print("[DC] Volume Dice Coefficient: {:.4f}".format(avg_Dice))
     print("[VOE] Volumetric Overlap Error: {:.2f} %".format(100.*avg_VOE))
 
-    # Open our existing CSV file in append mode
-    # Create a file object for this file
-    with open(r'./dataWithPhoto/_temp/temp_result_fold{}.csv'.format(FOLD_IDX), 'a', newline='') as f_object:
+    with open(ret_csv, 'a', newline='') as f_object:
         writer_object = csv.writer(f_object)
-        writer_object.writerow([patientID,RMSE_pred,RMSD_pred,ASSD_pred,HD_pred,RMSE_T_pred,RMSD_T_pred,ASSD_T_pred,HD_T_pred,avg_Dice,avg_VOE])
+        writer_object.writerow([patientID,RMSD_T_pred,ASSD_T_pred,HD_T_pred,CD_T_pred,avg_Dice,avg_VOE])
         f_object.close()
+        
 
 
 @ray.remote
@@ -396,41 +304,41 @@ def createAlignedPredMeshes(TagID):
     demoH5File2Load = os.path.join(DEMO_H5_DIR, "demo_TagID={}.h5".format(patientID))
     X_Mu_Upper, X_Mu_Lower, X_Pred_Upper, X_Pred_Lower, X_Ref_Upper, X_Ref_Lower, rela_R, rela_t = proj.readDemoFromH5(demoH5File2Load, patientID)
     with_scale = True
-    T_Upper = utils.computeTransMatByCorres(X_Pred_Upper.reshape(-1,3), X_Ref_Upper.reshape(-1,3), with_scale=with_scale)
-    T_Lower = utils.computeTransMatByCorres(X_Pred_Lower.reshape(-1,3), X_Ref_Lower.reshape(-1,3), with_scale=with_scale)
+    T_Upper = pm_util.computeTransMatByCorres(X_Pred_Upper.reshape(-1,3), X_Ref_Upper.reshape(-1,3), with_scale=with_scale)
+    T_Lower = pm_util.computeTransMatByCorres(X_Pred_Lower.reshape(-1,3), X_Ref_Lower.reshape(-1,3), with_scale=with_scale)
 
     TX_Pred_Upper = np.matmul(X_Pred_Upper, T_Upper[:3,:3]) + T_Upper[3,:3]
     TX_Pred_Lower = np.matmul(X_Pred_Lower, T_Lower[:3,:3]) + T_Lower[3,:3]
 
-    X_Ref_Upper_Meshes = [utils.surfaceVertices2WatertightO3dMesh(pg) for pg in X_Ref_Upper]
-    X_Ref_Lower_Meshes = [utils.surfaceVertices2WatertightO3dMesh(pg) for pg in X_Ref_Lower]
-    Ref_Upper_Mesh = utils.mergeO3dTriangleMeshes(X_Ref_Upper_Meshes)
-    Ref_Lower_Mesh = utils.mergeO3dTriangleMeshes(X_Ref_Lower_Meshes)
+    X_Ref_Upper_Meshes = [pm_util.surfaceVertices2WatertightO3dMesh(pg) for pg in X_Ref_Upper]
+    X_Ref_Lower_Meshes = [pm_util.surfaceVertices2WatertightO3dMesh(pg) for pg in X_Ref_Lower]
+    Ref_Upper_Mesh = pm_util.mergeO3dTriangleMeshes(X_Ref_Upper_Meshes)
+    Ref_Lower_Mesh = pm_util.mergeO3dTriangleMeshes(X_Ref_Lower_Meshes)
 
-    X_Pred_Upper_Meshes = [utils.surfaceVertices2WatertightO3dMesh(pg) for pg in X_Pred_Upper]
-    X_Pred_Lower_Meshes = [utils.surfaceVertices2WatertightO3dMesh(pg) for pg in X_Pred_Lower]
-    Pred_Upper_Mesh = utils.mergeO3dTriangleMeshes(X_Pred_Upper_Meshes)
-    Pred_Lower_Mesh = utils.mergeO3dTriangleMeshes(X_Pred_Lower_Meshes)
+    X_Pred_Upper_Meshes = [pm_util.surfaceVertices2WatertightO3dMesh(pg) for pg in X_Pred_Upper]
+    X_Pred_Lower_Meshes = [pm_util.surfaceVertices2WatertightO3dMesh(pg) for pg in X_Pred_Lower]
+    Pred_Upper_Mesh = pm_util.mergeO3dTriangleMeshes(X_Pred_Upper_Meshes)
+    Pred_Lower_Mesh = pm_util.mergeO3dTriangleMeshes(X_Pred_Lower_Meshes)
 
-    TX_Pred_Upper_Meshes = [utils.surfaceVertices2WatertightO3dMesh(pg) for pg in TX_Pred_Upper]
-    TX_Pred_Lower_Meshes = [utils.surfaceVertices2WatertightO3dMesh(pg) for pg in TX_Pred_Lower]
-    Aligned_Pred_Upper_Mesh = utils.mergeO3dTriangleMeshes(TX_Pred_Upper_Meshes)
-    Aligned_Pred_Lower_Mesh = utils.mergeO3dTriangleMeshes(TX_Pred_Lower_Meshes)
+    TX_Pred_Upper_Meshes = [pm_util.surfaceVertices2WatertightO3dMesh(pg) for pg in TX_Pred_Upper]
+    TX_Pred_Lower_Meshes = [pm_util.surfaceVertices2WatertightO3dMesh(pg) for pg in TX_Pred_Lower]
+    Aligned_Pred_Upper_Mesh = pm_util.mergeO3dTriangleMeshes(TX_Pred_Upper_Meshes)
+    Aligned_Pred_Lower_Mesh = pm_util.mergeO3dTriangleMeshes(TX_Pred_Lower_Meshes)
 
     demoMeshDir = os.path.join(DEMO_MESH_DIR, "{}/".format(patientID))
     if not os.path.exists(demoMeshDir):
         os.makedirs(demoMeshDir)
-    utils.exportTriMeshObj(np.asarray(Ref_Upper_Mesh.vertices), np.asarray(Ref_Upper_Mesh.triangles), \
+    pm_util.exportTriMeshObj(np.asarray(Ref_Upper_Mesh.vertices), np.asarray(Ref_Upper_Mesh.triangles), \
                         os.path.join(demoMeshDir,"Ref_Upper_Mesh_TagID={}.obj".format(patientID)))
-    utils.exportTriMeshObj(np.asarray(Ref_Lower_Mesh.vertices), np.asarray(Ref_Lower_Mesh.triangles), \
+    pm_util.exportTriMeshObj(np.asarray(Ref_Lower_Mesh.vertices), np.asarray(Ref_Lower_Mesh.triangles), \
                         os.path.join(demoMeshDir,"Ref_Lower_Mesh_TagID={}.obj".format(patientID)))
-    utils.exportTriMeshObj(np.asarray(Pred_Upper_Mesh.vertices), np.asarray(Pred_Upper_Mesh.triangles), \
+    pm_util.exportTriMeshObj(np.asarray(Pred_Upper_Mesh.vertices), np.asarray(Pred_Upper_Mesh.triangles), \
                         os.path.join(demoMeshDir,"Pred_Upper_Mesh_TagID={}.obj".format(patientID)))
-    utils.exportTriMeshObj(np.asarray(Pred_Lower_Mesh.vertices), np.asarray(Pred_Lower_Mesh.triangles), \
+    pm_util.exportTriMeshObj(np.asarray(Pred_Lower_Mesh.vertices), np.asarray(Pred_Lower_Mesh.triangles), \
                         os.path.join(demoMeshDir,"Pred_Lower_Mesh_TagID={}.obj".format(patientID)))
-    utils.exportTriMeshObj(np.asarray(Aligned_Pred_Upper_Mesh.vertices), np.asarray(Aligned_Pred_Upper_Mesh.triangles), \
+    pm_util.exportTriMeshObj(np.asarray(Aligned_Pred_Upper_Mesh.vertices), np.asarray(Aligned_Pred_Upper_Mesh.triangles), \
                         os.path.join(demoMeshDir,"Aligned_Pred_Upper_Mesh_TagID={}.obj".format(patientID)))
-    utils.exportTriMeshObj(np.asarray(Aligned_Pred_Lower_Mesh.vertices), np.asarray(Aligned_Pred_Lower_Mesh.triangles), \
+    pm_util.exportTriMeshObj(np.asarray(Aligned_Pred_Lower_Mesh.vertices), np.asarray(Aligned_Pred_Lower_Mesh.triangles), \
                         os.path.join(demoMeshDir,"Aligned_Pred_Lower_Mesh_TagID={}.obj".format(patientID)))
     print("Finish create mesh of TagID: {}".format(patientID))
 
@@ -438,6 +346,28 @@ def createAlignedPredMeshes(TagID):
 
 
 def main(phase):
+
+    Mu, SqrtEigVals, Sigma = proj.loadMuEigValSigma(SSM_DIR, numPC=NUM_PC)
+    Mu_normals = EMOpt5Views.computePointNormals(Mu)
+
+    invRegistrationParamDF = proj.loadInvRegistrationParams(loadDir=PARAM_DIR) # 加载配准过程中的参数
+    invParamDF = proj.updateAbsTransVecs(invRegistrationParamDF, Mu) # 将牙列scale转化为每颗牙齿的位移，将每颗牙齿的transVecXYZs在局部坐标系下进行表达
+
+    invScaleMeans, invScaleVars, invRotVecXYZMeans, invRotVecXYZVars, invTransVecXYZMeans, invTransVecXYZVars = proj.getMeanAndVarianceOfInvRegistrationParams(invParamDF)
+    scaleStds = np.sqrt(invScaleVars)
+    transVecStds = np.sqrt(invTransVecXYZVars)
+    rotVecStds = np.sqrt(invRotVecXYZVars)
+    print("scaleStd: {:.4f}, transVecStd: {:.4f}, rotVecStd: {:.4f}".format(scaleStds.mean(), transVecStds.mean(), rotVecStds.mean()))
+
+    PoseCovMats = proj.GetPoseCovMats(invParamDF, toothIndices=UPPER_INDICES+LOWER_INDICES) # 每个位置的牙齿的6个变换参数的协方差矩阵,shape=(28,6,6)
+    ScaleCovMat = proj.GetScaleCovMat(invParamDF, toothIndices=UPPER_INDICES+LOWER_INDICES) # 牙齿scale的协方差矩阵,shape=(28,28)
+
+    str_photo_types = ["upperPhoto","lowerPhoto","leftPhoto","rightPhoto","frontalPhoto"]
+    photoTypes = [PHOTO.UPPER, PHOTO.LOWER, PHOTO.LEFT, PHOTO.RIGHT, PHOTO.FRONTAL]
+    VISIBLE_MASKS = [proj.MASK_UPPER, proj.MASK_LOWER, proj.MASK_LEFT, proj.MASK_RIGHT, proj.MASK_FRONTAL]
+    
+    
+    
     for TagID in TagID_Folds[FOLD_IDX]:
         LogFile = os.path.join(LOG_DIR, "TagID-{}.log".format(TagID))
         # Log file
@@ -445,10 +375,20 @@ def main(phase):
             os.remove(LogFile)
         log = open(LogFile, "a", encoding='utf-8')
         sys.stdout = log
+        
+        edgeMasks = proj.getEdgeMask(EDGE_MASK_PATH, NAME_IDX_CSV, TagID, str_photo_types, resized_width=800, binary=True, activation_thre=0.5)
+        Mask = proj.GetMaskByTagId(MASK_NPY, TagId=TagID)
+        # reference pointcloud
+        PG_Ref = proj.GetPGByTagId(PG_NPY, TagId=TagID)
+        X_Ref = PG_Ref[Mask]
+        emopt = EMOpt5Views(edgeMasks, photoTypes, VISIBLE_MASKS, Mask, Mu, Mu_normals, SqrtEigVals, Sigma, PoseCovMats, ScaleCovMat, transVecStds.mean(), rotVecStds.mean())
 
-        run_emopt(TagID, phase)
+        emopt = run_emopt(TagID, emopt, X_Ref, phase)
         if phase == 1:
-            evaluation(TagID)
+            demoh5File = os.path.join(DEMO_H5_DIR, "demo_TagID={}.h5".format(TagID))
+            emopt.saveDemo2H5(demoh5File, TagID, X_Ref)
+            ret_csv = os.path.join(TEMP_DIR,r'temp_result_fold{}.csv'.format(FOLD_IDX))
+            evaluation(TagID, demoh5File, ret_csv)
 
         log.close()
 

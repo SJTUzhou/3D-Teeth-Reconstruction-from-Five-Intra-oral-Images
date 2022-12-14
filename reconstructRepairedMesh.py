@@ -13,7 +13,7 @@ import copy
 import trimesh
 import ray
 import psutil
-from utils import fixedNumDownSample, surfaceVertices2WatertightO3dMesh, loadAlignedPointGroupsWithIndex, getEigValVecOfSSMByPCA, remainedInfoRatio
+from pcd_mesh_utils import fixedNumDownSample, surfaceVertices2WatertightO3dMesh, loadAlignedPointGroupsWithIndex, getEigValVecOfSSMByPCA, remainedInfoRatio
 
 
 IndicesOfScanPgRepairedBySSM = {11:[15,18,22,25,37,40,55,58,59,68,73,83,89,91],

@@ -8,8 +8,8 @@ import functools
 import time
 import ray
 import psutil
-from utils import LOWER_INDICES, UPPER_INDICES, farthestPointDownSample, getRotAngles, saveAlignedPointGroups2Txt, loadAlignedPointGroupsWithIndex, getEigValVecOfSSMByPCA, \
-    remainedInfoRatio, saveRegistrationParams2Hdf5, readRegistrationParamsFromHDF5, printPlotRegistrationParams, getRotMat
+from pcd_mesh_utils import farthestPointDownSample
+from ssm_utils import *
 from gp_non_rigid_registration import GP_Non_Rigid_Registration
 
 

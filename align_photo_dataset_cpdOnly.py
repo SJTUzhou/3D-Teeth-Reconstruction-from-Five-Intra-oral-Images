@@ -1,16 +1,12 @@
 import cycpd
-import matplotlib.pyplot as plt
 import numpy as np
 import os
 import glob
-import shutil
-import open3d as o3d
 import time
 import ray
 import psutil
-import h5py
-from utils import fixedNumDownSample, getEigValVecOfSSMByPCA, saveAlignedPointGroups2Txt, loadAlignedPointGroupsWithIndex,\
-    remainedInfoRatio, saveRegistrationParams2Hdf5, readRegistrationParamsFromHDF5, printPlotRegistrationParams
+from pcd_mesh_utils import fixedNumDownSample
+from ssm_utils import * 
 
 
 

@@ -6,7 +6,7 @@ import pandas as pd
 import json
 import shutil
 import glob
-from utils import getLargestConnectedMeshComponent, removeMeshSmallComponents
+from pcd_mesh_utils import getLargestConnectedMeshComponent, removeMeshSmallComponents
 from separate_raw import getLabels, getMeshVF, extractVerticesFaces, getTransformMat, transformVertexPos, clearPrevOutput
 
 

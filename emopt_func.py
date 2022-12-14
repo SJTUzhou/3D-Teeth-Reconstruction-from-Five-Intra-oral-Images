@@ -136,7 +136,7 @@ def computeGroupedPointNormals(X):
         pcd.points = o3d.utility.Vector3dVector(X[i])
         pcd.estimate_normals(search_param=o3d.geometry.KDTreeSearchParamKNN(30))
         # to obtain a consistent normal orientation
-        # pcd.orient_normals_consistent_tangent_plane(k=30)
+        pcd.orient_normals_consistent_tangent_plane(k=30)
         pcd.normalize_normals()
         normals[i] = np.asarray(pcd.normals,dtype=np.float64)
     return normals
@@ -535,12 +535,12 @@ def numba_get_global_point_correspondences(P_true, P_pred, P_true_normals, P_pre
 
 
 
-import utils
+import pcd_mesh_utils
 if __name__ == "__main__":
     vertices = np.random.random((10000,2))
     tic = time.time()
     x1 = farthestPointDownSample(vertices, 4000)
-    x2 = utils.farthestPointDownSample(vertices, 4000)
+    x2 = pcd_mesh_utils.farthestPointDownSample(vertices, 4000)
     toc = time.time()
     print(toc-tic)
     print(np.allclose(x1,x2))
