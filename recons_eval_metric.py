@@ -9,7 +9,7 @@ from pcd_mesh_utils import surfaceVertices2WatertightO3dMesh
 
 def computeRMSE(X_pred, X_Ref):
     # compute Root Mean Square Error of corresponding points
-    pointL2Errors = np.linalg.norm(X_pred - X_Ref, axis=2, ord=2)
+    pointL2Errors = np.linalg.norm(X_pred - X_Ref, axis=-1, ord=2)
     return np.mean(pointL2Errors)
 
 def computeRMSD(X_Pred, X_Ref, return_list=False):
@@ -50,11 +50,13 @@ def computeHD(X_Pred, X_Ref, return_list=False):
         return HDs
     return np.mean(HDs)
 
-def computeChamferDistance(X_Pred, X_Ref): 
+def computeChamferDistance(X_Pred, X_Ref, return_list=False): 
     CDs = []
     for x_pred, x_ref in zip(X_Pred, X_Ref):
         squaredDistMat = scipy.spatial.distance_matrix(x_pred, x_ref, p=2, threshold=int(1e8)) ** 2
         CDs.append(np.min(squaredDistMat, axis=0).mean() + np.min(squaredDistMat, axis=1).mean())
+    if return_list == True:
+        return CDs
     return np.mean(CDs)
 
 

@@ -66,8 +66,8 @@ def nearest_retrieval(tagID, ssmPgActor):
             continue # exists missing teeth in i-th SSM sample compared with ref Pg
         _pgU = pgU[Mask_U]
         _pgL = pgL[Mask_L]
-        T_Upper = pcd_mesh_utils.computeTransMatByCorres(_pgU.reshape(-1,3), X_Ref_U.reshape(-1,3), with_scale=False)
-        T_Lower = pcd_mesh_utils.computeTransMatByCorres(_pgL.reshape(-1,3), X_Ref_L.reshape(-1,3), with_scale=False)
+        T_Upper = pcd_mesh_utils.computeTransMatByCorres(_pgU.reshape(-1,3), X_Ref_U.reshape(-1,3), with_scale=True)
+        T_Lower = pcd_mesh_utils.computeTransMatByCorres(_pgL.reshape(-1,3), X_Ref_L.reshape(-1,3), with_scale=True)
         T_pgU = np.matmul(_pgU, T_Upper[:3,:3]) + T_Upper[3,:3]
         T_pgL = np.matmul(_pgL, T_Lower[:3,:3]) + T_Lower[3,:3]
         rmse = metric.computeRMSE(X_Ref, np.concatenate([T_pgU,T_pgL]))
@@ -86,11 +86,12 @@ def nearest_retrieval(tagID, ssmPgActor):
     RMSDs = np.array(metric.computeRMSD(X_Ref, T_pg, return_list=True))
     ASSDs = np.array(metric.computeASSD(X_Ref, T_pg, return_list=True))
     HDs = np.array(metric.computeHD(X_Ref, T_pg, return_list=True))
+    CDs = np.array(metric.computeChamferDistance(X_Ref, T_pg, return_list=True))
     Dice_VOE_lst = [metric.computeDiceAndVOE(_x1, _x2, pitch=0.2) for _x1, _x2 in zip(X_Ref, T_pg)]
     Dice_VOEs = np.array(Dice_VOE_lst)
 
-    Metrics_array = np.hstack([np.tile(tagID,(len(indices),1)), indices[:,None], RMSDs[:,None], ASSDs[:,None], HDs[:,None], Dice_VOEs])
-    df = pd.DataFrame(data=Metrics_array, columns=["tagID", "toothID", "RMSD", "ASSD", "HD", "DSC", "VOE"])
+    Metrics_array = np.hstack([np.tile(tagID,(len(indices),1)), indices[:,None], RMSDs[:,None], ASSDs[:,None], HDs[:,None], CDs[:,None], Dice_VOEs])
+    df = pd.DataFrame(data=Metrics_array, columns=["tagID", "toothID", "RMSD", "ASSD", "HD", "CD", "DSC", "VOE"])
     df = df.astype({"tagID":int,"toothID":int})
     print("Finish TagID: ", tagID)
     return df
@@ -117,7 +118,7 @@ if __name__ == "__main__":
     masksU = np.load(maskU_npy)
     masksL = np.load(maskL_npy)
 
-    NUM_CPUS = psutil.cpu_count(logical=False)
+    NUM_CPUS = 8 # psutil.cpu_count(logical=False)
     ray.init(num_cpus=NUM_CPUS, num_gpus=1) #ray(多线程)初始化
 
     ssmPgActor = SsmPgActor.remote(pgsU, pgsL, masksU, masksL)

@@ -15,8 +15,8 @@ from projection_utils import PHOTO, MASK_FRONTAL, MASK_LEFT, MASK_LOWER, MASK_RI
 
 
 
-H5_DIR = r"./dataWithPhoto/demo/" # r"./dataWithPhoto/demo/Grad-99%conf-v21-PC=10/"
-MESH_DIR = r"./dataWithPhoto/demoMesh/" # r"./dataWithPhoto/demoMesh/Grad-99%conf-v21-PC=10/"
+H5_DIR = r"./dataWithPhoto/demo/Grad-99%conf-v21-PC=10/"
+MESH_DIR = r"./dataWithPhoto/demoMesh/Grad-99%conf-v21-PC=10/"
 PHOTO_DIR = r"./dataWithPhoto/normal_resized/"
 EDGE_DIR = r"./dataWithPhoto/normal_mask/"
 IMG_WIDTH = 800
@@ -238,14 +238,14 @@ def meshErrorProjectionWithSelectedTeeth(visualizer, tagID):
 
 
 def color_bar():
-    fig, ax = plt.subplots(figsize=(12,2))
+    fig, ax = plt.subplots(figsize=(2,12))
 
     cmap = mpl.cm.get_cmap("jet")
-    norm = mpl.colors.Normalize(vmin=0, vmax=1.8)
+    norm = mpl.colors.Normalize(vmin=0, vmax=5.0)
 
     cb = mpl.colorbar.ColorbarBase(ax, cmap=cmap,
                                     norm=norm,
-                                    orientation='horizontal')
+                                    orientation='vertical')
     cb.set_label('Alignment Error (mm)',size=16)
     cb.ax.tick_params(labelsize=16)
 

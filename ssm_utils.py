@@ -171,6 +171,8 @@ def visualizeCompactnessOfSSM(eigVal):
     plt.ylabel("Cumulative explained variance")
     plt.xlabel("Num of PCA component")
     plt.grid()
+    plt.show()
+    
 
 
 

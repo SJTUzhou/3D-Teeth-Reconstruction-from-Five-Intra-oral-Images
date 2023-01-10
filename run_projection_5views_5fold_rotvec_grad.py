@@ -368,27 +368,26 @@ def main(phase):
     
     
     
-    for TagID in TagID_Folds[FOLD_IDX]:
-        LogFile = os.path.join(LOG_DIR, "TagID-{}.log".format(TagID))
-        # Log file
+    for ID in TagID_Folds[FOLD_IDX]:
+        LogFile = os.path.join(LOG_DIR, "TagID-{}.log".format(ID))
         if os.path.exists(LogFile):
             os.remove(LogFile)
         log = open(LogFile, "a", encoding='utf-8')
         sys.stdout = log
         
-        edgeMasks = proj.getEdgeMask(EDGE_MASK_PATH, NAME_IDX_CSV, TagID, str_photo_types, resized_width=800, binary=True, activation_thre=0.5)
-        Mask = proj.GetMaskByTagId(MASK_NPY, TagId=TagID)
+        edgeMasks = proj.getEdgeMask(EDGE_MASK_PATH, NAME_IDX_CSV, ID, str_photo_types, resized_width=800, binary=True, activation_thre=0.5)
+        Mask = proj.GetMaskByTagId(MASK_NPY, TagId=ID)
         # reference pointcloud
-        PG_Ref = proj.GetPGByTagId(PG_NPY, TagId=TagID)
+        PG_Ref = proj.GetPGByTagId(PG_NPY, TagId=ID)
         X_Ref = PG_Ref[Mask]
         emopt = EMOpt5Views(edgeMasks, photoTypes, VISIBLE_MASKS, Mask, Mu, Mu_normals, SqrtEigVals, Sigma, PoseCovMats, ScaleCovMat, transVecStds.mean(), rotVecStds.mean())
 
-        emopt = run_emopt(TagID, emopt, X_Ref, phase)
+        emopt = run_emopt(ID, emopt, X_Ref, phase)
         if phase == 1:
-            demoh5File = os.path.join(DEMO_H5_DIR, "demo_TagID={}.h5".format(TagID))
-            emopt.saveDemo2H5(demoh5File, TagID, X_Ref)
+            demoh5File = os.path.join(DEMO_H5_DIR, "demo_TagID={}.h5".format(ID))
+            emopt.saveDemo2H5(demoh5File, ID, X_Ref)
             ret_csv = os.path.join(TEMP_DIR,r'temp_result_fold{}.csv'.format(FOLD_IDX))
-            evaluation(TagID, demoh5File, ret_csv)
+            evaluation(ID, demoh5File, ret_csv)
 
         log.close()
 
