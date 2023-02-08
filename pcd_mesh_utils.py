@@ -3,6 +3,7 @@
 import open3d as o3d
 import trimesh
 import numpy as np
+import copy
 
 
 
@@ -84,20 +85,29 @@ def exportTriMeshObj(vertices, faces, objFile):
 
 
 
+def mergeO3dTriangleMeshes(o3dMeshes):
+    '''Merge open3d triangle meshes
+    Input:
+        o3dMeshes: List of open3d.geometry.TriangleMesh
+    Output:
+        aggMesh: open3d.geometry.TriangleMesh
+    '''
+    assert len(o3dMeshes) > 0
+    aggMesh = copy.deepcopy(o3dMeshes)
+    for _mesh in o3dMeshes:
+        aggMesh += _mesh
+    return aggMesh
 
-def computeTransMatByCorres(X_src, X_target, with_scale=False):
+
+
+def computeTransMat(X_src, X_target, with_scale=False):
     assert X_src.ndim == 2, "X_src array should be 2d."
     assert X_target.ndim == 2, "X_target array should be 2d."
-    pcd_src = o3d.geometry.PointCloud()
-    pcd_src.points = o3d.utility.Vector3dVector(X_src)
-    pcd_target = o3d.geometry.PointCloud()
-    pcd_target.points = o3d.utility.Vector3dVector(X_target)
-    pNum = len(X_src)
-    _corre = np.tile(np.arange(pNum),(2,1)).T
-    corres = o3d.utility.Vector2iVector(_corre)
-    reg = o3d.pipelines.registration.TransformationEstimationPointToPoint(with_scale)
-    homoTransMat = reg.compute_transformation(pcd_src, pcd_target, corres)
-    return homoTransMat.T
+    
+    
+    # CPD registration
+    
+    return np.eye(4)
 
 
 
