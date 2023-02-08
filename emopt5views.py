@@ -16,16 +16,9 @@ import skimage
 import ray
 import functools
 import h5py
-import enum
+from const import PHOTO
 
-@enum.unique
-class PHOTO(enum.Enum):
-    # Enum values must be 0,1,2,3,4 
-    UPPER = 0
-    LOWER = 1
-    LEFT = 2
-    RIGHT = 3
-    FRONTAL = 4
+
 
 
 
@@ -1255,17 +1248,15 @@ class EMOpt5Views(object):
     ######### Save H5 File ############
     ###################################
     
-    def saveDemo2H5(self, h5File, patientId, X_Ref):
+    def saveDemo2H5(self, h5File):
         if not os.path.exists(os.path.dirname(h5File)):
             os.makedirs(os.path.dirname(h5File))
         with h5py.File(h5File,'w') as f: # ovewrite file each time
-            grp = f.create_group(str(patientId))
+            grp = f.create_group("EMOPT")
             grp.create_dataset("UPPER_INIT", data=np.array(self.X_Mu[:self.numUpperTooth], dtype=np.double))
             grp.create_dataset("LOWER_INIT", data=np.array(self.X_Mu[self.numUpperTooth:], dtype=np.double))
             grp.create_dataset("UPPER_PRED", data=np.array(self.X_trans[:self.numUpperTooth], dtype=np.double))
             grp.create_dataset("LOWER_PRED", data=np.array(self.X_trans[self.numUpperTooth:], dtype=np.double))
-            grp.create_dataset("UPPER_REF", data=np.array(X_Ref[:self.numUpperTooth], dtype=np.double))
-            grp.create_dataset("LOWER_REF", data=np.array(X_Ref[self.numUpperTooth:], dtype=np.double))
             grp.create_dataset("MASK", data=np.array(self.Mask, dtype=np.double))
             grp.create_dataset("RELA_R", data=np.array(self.rela_R, dtype=np.double))
             grp.create_dataset("RELA_T", data=np.array(self.rela_txyz, dtype=np.double))
