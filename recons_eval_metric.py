@@ -1,3 +1,5 @@
+# Evaluation Metrics for 3D teeth Reconstruction
+
 import numpy as np
 import scipy
 import trimesh
@@ -5,16 +7,19 @@ from trimesh.voxel import creation as tri_creation
 from pcd_mesh_utils import surfaceVertices2WatertightO3dMesh
 
 
-"""Evaluation Metrics for 3D teeth Reconstruction"""
 
-def computeRMSE(X_pred, X_Ref):
-    # compute Root Mean Square Error of corresponding points
-    pointL2Errors = np.linalg.norm(X_pred - X_Ref, axis=-1, ord=2)
-    return np.mean(pointL2Errors)
 
 def computeRMSD(X_Pred, X_Ref, return_list=False):
-    # compute Root Mean Squared symmetric surface Distance
+    '''compute Root Mean Squared symmetric surface Distance between two tooth rows
+    Input:
+        X_Pred: List of numpy array, each array's shape = (?,3)
+        X_Ref: List of numpy array, each array's shape = (?,3), len(X_Ref) == len(X_Pred)
+        return_list: bool, whether to return the mean metric value for each tooth in the tooth row
+    Output: 
+        mean RMSD, double if return_list == True else List of double
+    ''' 
     RMSDs = []
+    assert len(X_Pred) == len(X_Ref), "the number of teeth in each tooth row should be equal."
     for x_pred, x_ref in zip(X_Pred, X_Ref):
         dist_mat = scipy.spatial.distance_matrix(x_pred, x_ref, p=2, threshold=int(1e8))
         squared_sd1 = np.square(np.min(dist_mat, axis=0))
@@ -25,9 +30,19 @@ def computeRMSD(X_Pred, X_Ref, return_list=False):
         return RMSDs
     return np.mean(RMSDs)
 
+
+
 def computeASSD(X_Pred, X_Ref, return_list=False):
-    # compute Average Symmetric Surface Distance
+    '''compute Average Symmetric Surface Distance between two tooth rows
+    Input:
+        X_Pred: List of numpy array, each array's shape = (?,3)
+        X_Ref: List of numpy array, each array's shape = (?,3), len(X_Ref) == len(X_Pred)
+        return_list: bool, whether to return the mean metric value for each tooth in the tooth row
+    Output: 
+        mean ASSD, double if return_list == True else List of double
+    ''' 
     ASSDs = []
+    assert len(X_Pred) == len(X_Ref), "the number of teeth in each tooth row should be equal."
     for x_pred, x_ref in zip(X_Pred, X_Ref):
         dist_mat = scipy.spatial.distance_matrix(x_pred, x_ref, p=2, threshold=int(1e8))
         sd1 = np.min(dist_mat, axis=0)
@@ -38,9 +53,20 @@ def computeASSD(X_Pred, X_Ref, return_list=False):
         return ASSDs
     return np.mean(ASSDs)
 
+
+
+
 def computeHD(X_Pred, X_Ref, return_list=False):
-    # compute Hausdorff Distance
+    '''compute Hausdorff Distance between two tooth rows
+    Input:
+        X_Pred: List of numpy array, each array's shape = (?,3)
+        X_Ref: List of numpy array, each array's shape = (?,3), len(X_Ref) == len(X_Pred)
+        return_list: bool, whether to return the mean metric value for each tooth in the tooth row
+    Output: 
+        mean HD, double if return_list == True else List of double
+    ''' 
     HDs = []
+    assert len(X_Pred) == len(X_Ref), "the number of teeth in each tooth row should be equal."
     for x_pred, x_ref in zip(X_Pred, X_Ref):
         dist_mat = scipy.spatial.distance_matrix(x_pred, x_ref, p=2, threshold=int(1e8))
         hd1 = np.max(np.min(dist_mat, axis=0))
@@ -50,8 +76,19 @@ def computeHD(X_Pred, X_Ref, return_list=False):
         return HDs
     return np.mean(HDs)
 
+
+
 def computeChamferDistance(X_Pred, X_Ref, return_list=False): 
+    '''compute Chamfer Distance between two tooth rows
+    Input:
+        X_Pred: List of numpy array, each array's shape = (?,3)
+        X_Ref: List of numpy array, each array's shape = (?,3), len(X_Ref) == len(X_Pred)
+        return_list: bool, whether to return the mean metric value for each tooth in the tooth row
+    Output: 
+        mean CD, double if return_list == True else List of double
+    ''' 
     CDs = []
+    assert len(X_Pred) == len(X_Ref), "the number of teeth in each tooth row should be equal."
     for x_pred, x_ref in zip(X_Pred, X_Ref):
         squaredDistMat = scipy.spatial.distance_matrix(x_pred, x_ref, p=2, threshold=int(1e8)) ** 2
         CDs.append(np.min(squaredDistMat, axis=0).mean() + np.min(squaredDistMat, axis=1).mean())
@@ -60,9 +97,17 @@ def computeChamferDistance(X_Pred, X_Ref, return_list=False):
     return np.mean(CDs)
 
 
+
+
 def computeDiceAndVOE(x_ref, x_pred, pitch=0.2):
     ''' compute volume dice coefficient and volumetric overlap error of two surface point clouds
-        Assume the 2 surface point clouds are already aligned'''
+        Assume the 2 surface point clouds are already aligned
+    Input:
+        x_pred: numpy array, shape = (?,3)
+        x_ref: numpy array, shape = (?,3)
+        pitch: double, controls the voxel size when voxelizing the mesh
+    Output: 
+        double, double'''
     # convert surface point cloud to watertight mesh
     msh_ref_o3d = surfaceVertices2WatertightO3dMesh(x_ref, showInWindow=False)
     msh_pred_o3d = surfaceVertices2WatertightO3dMesh(x_pred, showInWindow=False)
