@@ -16,7 +16,16 @@ import skimage
 import ray
 import functools
 import h5py
-from projection_utils import PHOTO
+import enum
+
+@enum.unique
+class PHOTO(enum.Enum):
+    # Enum values must be 0,1,2,3,4 
+    UPPER = 0
+    LOWER = 1
+    LEFT = 2
+    RIGHT = 3
+    FRONTAL = 4
 
 
 
