@@ -60,6 +60,13 @@ def surfaceVertices2WatertightO3dMesh(vertices, showInWindow=False):
     pcd.estimate_normals()
     # to obtain a consistent normal orientation
     pcd.orient_normals_consistent_tangent_plane(k=30)
+    pcd.normalize_normals()
+    normal = np.asarray(pcd.normals)
+    center = np.mean(vertices, 0)
+    vecs = vertices - center
+    opposite_mask = np.sum(vecs * normal, 1) < 0
+    normal[opposite_mask] = -normal[opposite_mask]
+    pcd.normals = o3d.utility.Vector3dVector(normal)
     # surface reconstruction using Poisson reconstruction
     __mesh, _ = o3d.geometry.TriangleMesh.create_from_point_cloud_poisson(pcd, depth=8, scale=1.1)
     if showInWindow == True:
