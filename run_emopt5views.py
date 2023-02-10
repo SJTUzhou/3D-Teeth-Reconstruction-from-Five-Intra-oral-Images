@@ -1,34 +1,44 @@
 import os
 import sys
 import numpy as np
-import pcd_mesh_utils as pm_util
-import recons_eval_metric as metric
-import projection_utils as proj
+import open3d as o3d
 import functools
 import ray
 import psutil
 import h5py
+import glob
+import matplotlib.pyplot as plt
+
+import pcd_mesh_utils as pm_util
+import recons_eval_metric as metric
 from emopt5views import EMOpt5Views
 from const import *
 from segmentation import ASPP_UNet, predict_teeth_contour
 
 
- 
-SSM_DIR = r"./ssm/eigValVec/"
-REGIS_PARAM_DIR = r"./ssm/cpdGpParams/"
 TEMP_DIR = r"./demo/_temp/"
-DEMO_H5_DIR = r"./demo/h5/"
-DEMO_MESH_DIR = r"./demo/mesh/"
-REF_MESH_DIR = r"./demo/ref_mesh/"
 os.makedirs(TEMP_DIR, exist_ok=True)
-os.makedirs(DEMO_H5_DIR, exist_ok=True)
-os.makedirs(DEMO_MESH_DIR, exist_ok=True)
 
 NUM_CPUS = psutil.cpu_count(logical=False)
 print = functools.partial(print, flush=True)
 
 
+def getToothIndex(f):
+    return int(os.path.basename(f).split(".")[0].split("_")[-1])
 
+
+def loadMuEigValSigma(ssmDir, numPC):
+    """Mu.shape=(28,1500,3), sqrtEigVals.shape=(28,1,100), Sigma.shape=(28,4500,100)"""
+    muNpys = glob.glob(os.path.join(ssmDir,"meanAlignedPG_*.npy"))
+    muNpys = sorted(muNpys, key=lambda x:getToothIndex(x))
+    Mu = np.array([np.load(x) for x in muNpys])
+    eigValNpys = glob.glob(os.path.join(ssmDir,"eigVal_*.npy"))
+    eigValNpys = sorted(eigValNpys, key=lambda x:getToothIndex(x))
+    sqrtEigVals = np.sqrt(np.array([np.load(x) for x in eigValNpys]))
+    eigVecNpys = glob.glob(os.path.join(ssmDir,"eigVec_*.npy"))
+    eigVecNpys = sorted(eigVecNpys, key=lambda x:getToothIndex(x))
+    Sigma = np.array([np.load(x) for x in eigVecNpys])
+    return Mu, sqrtEigVals[:,np.newaxis,:numPC], Sigma[...,:numPC]
 
 
 def run_emopt(emopt):
@@ -193,10 +203,18 @@ def create_mesh_from_emopt_h5File(h5File, meshDir, save_name):
 
 
 
+def read_demo_mesh_vertices_by_FDI(mesh_dir, tag, FDIs):
+    mesh_vertices_by_FDI = []
+    for fdi in FDIs:
+        mshf = os.path.join(mesh_dir, str(tag), "byFDI", f"Ref_Mesh_Tag={tag}_FDI={fdi}.obj")
+        msh = o3d.io.read_triangle_mesh(mshf)
+        mesh_vertices_by_FDI.append(np.asarray(msh.vertices, np.float64))
+    return mesh_vertices_by_FDI
+
 
 
 def main(tag="0"):
-    Mu, SqrtEigVals, Sigma = proj.loadMuEigValSigma(SSM_DIR, numPC=NUM_PC)
+    Mu, SqrtEigVals, Sigma = loadMuEigValSigma(SSM_DIR, numPC=NUM_PC)
     Mu_normals = EMOpt5Views.computePointNormals(Mu)
 
     transVecStd = 1.1463183505325343 # obtained by SSM
@@ -204,11 +222,9 @@ def main(tag="0"):
     PoseCovMats = np.load(os.path.join(REGIS_PARAM_DIR, "PoseCovMats.npy")) # Covariance matrix of tooth pose for each tooth, shape=(28,6,6)
     ScaleCovMat = np.load(os.path.join(REGIS_PARAM_DIR, "ScaleCovMat.npy")) # Covariance matrix of scales for each tooth, shape=(28,28)
 
-    photoTypes = [PHOTO.UPPER, PHOTO.LOWER, PHOTO.LEFT, PHOTO.RIGHT, PHOTO.FRONTAL]
-    VISIBLE_MASKS = [MASK_UPPER, MASK_LOWER, MASK_LEFT, MASK_RIGHT, MASK_FRONTAL]
+    
     
     tooth_exist_mask = TOOTH_EXIST_MASK[tag]
-    temp_img_dir = r"./seg/valid/image/"
     LogFile = os.path.join(TEMP_DIR, "Tag={}.log".format(tag))
     if os.path.exists(LogFile):
         os.remove(LogFile)
@@ -222,19 +238,21 @@ def main(tag="0"):
     
     # predcit teeth boundary in each photo
     edgeMasks = []
-    for phtype in photoTypes:
-        imgfile = os.path.join(temp_img_dir, f"{tag}-{phtype.value}.png")
-        edge_mask = predict_teeth_contour(model, imgfile, resized_width=800) # resize image to (800,~600)
+    for phtype in PHOTO_TYPES:
+        imgfile = os.path.join(PHOTO_DIR, f"{tag}-{phtype.value}.png")
+        edge_mask = predict_teeth_contour(model, imgfile, resized_width=RECONS_IMG_WIDTH) # resize image to (800,~600)
         edgeMasks.append(edge_mask)
+        # plt.imshow(edge_mask)
+        # plt.show()
     
     del model # to release memory
     
     mask_u, mask_l = np.split(tooth_exist_mask, 2)
-    X_Ref_Upper = proj.read_demo_mesh_vertices_by_FDI(mesh_dir=REF_MESH_DIR, tag=tag, FDIs=np.array(UPPER_INDICES)[mask_u])
-    X_Ref_Lower = proj.read_demo_mesh_vertices_by_FDI(mesh_dir=REF_MESH_DIR, tag=tag, FDIs=np.array(LOWER_INDICES)[mask_l])
+    X_Ref_Upper = read_demo_mesh_vertices_by_FDI(mesh_dir=REF_MESH_DIR, tag=tag, FDIs=np.array(UPPER_INDICES)[mask_u])
+    X_Ref_Lower = read_demo_mesh_vertices_by_FDI(mesh_dir=REF_MESH_DIR, tag=tag, FDIs=np.array(LOWER_INDICES)[mask_l])
 
     # run deformation-based 3d reconstruction
-    emopt = EMOpt5Views(edgeMasks, photoTypes, VISIBLE_MASKS, tooth_exist_mask, Mu, Mu_normals, SqrtEigVals, Sigma, PoseCovMats, ScaleCovMat, transVecStd, rotVecStd)
+    emopt = EMOpt5Views(edgeMasks, PHOTO_TYPES, VISIBLE_MASKS, tooth_exist_mask, Mu, Mu_normals, SqrtEigVals, Sigma, PoseCovMats, ScaleCovMat, transVecStd, rotVecStd)
     emopt = run_emopt(emopt)
     demoh5File = os.path.join(DEMO_H5_DIR, f"demo-tag={tag}.h5")
     emopt.saveDemo2H5(demoh5File)
@@ -248,7 +266,7 @@ def main(tag="0"):
 
 if __name__ == "__main__":
     ray.init(num_cpus=4, num_gpus=0)  
-    tag = "1" # demo tag name: "0" or "1" 
+    tag = "0" # demo tag name: "0" or "1" 
     main(tag)
     
     

@@ -109,6 +109,13 @@ def mergeO3dTriangleMeshes(o3dMeshes):
 
 
 def getAlignedSrcPointCloud(X_src, X_target, with_scale=False):
+    '''registration between two pointclouds, first downsampling then use CPD
+    Input:
+        X_src: numpy array, shape (M,3)
+        X_target: numpy array, shape (?,3)
+        with_scale: bool, True for similarity registration, False for rigid regis.
+    Output:
+        aligned X_src: numpy array, shape (M,3)'''
     assert X_src.ndim == 2, "X_src array should be 2d."
     assert X_target.ndim == 2, "X_target array should be 2d."
     ds_X_src = farthestPointDownSample(X_src, num_point_sampled=3000, return_flag=False)

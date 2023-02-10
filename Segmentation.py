@@ -1,6 +1,7 @@
 import os
 import glob
 import numpy as np
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1" 
 import tensorflow as tf
 import sys
 import skimage
@@ -13,7 +14,6 @@ from const import *
  
 
 LOW_MEMORY = False
-EXPANSION_RATE = 3 
 ROOT_DIR = r"./seg/"
 TRAIN_PATH = os.path.join(ROOT_DIR, r"train/")
 VALID_PATH = os.path.join(ROOT_DIR, r"valid/")
@@ -123,8 +123,6 @@ class DataGenerator(keras.utils.Sequence):
             if LOW_MEMORY == True: # read from file
                 img = skimage.io.imread(img)
                 lbl = skimage.io.imread(lbl, as_gray=True)
-            # dilation 
-            lbl = skimage.morphology.dilation(lbl, skimage.morphology.disk(EXPANSION_RATE)) # dilation edge prediction for visualization
             x[i], y[i] = gen_data(img, lbl, self.train)
         return x, y
     
@@ -224,9 +222,9 @@ def compute_avg_recall_precision_F1score(masks, pred_prob_map, thre=0.5, from_lo
 
 
 def get_contour_from_raw_pred(pred_label, mask_shape, thresh=0.5):
-    pred_prob_map = skimage.transform.resize(pred_label, mask_shape)
-    pred_prob_map = skimage.morphology.erosion(pred_prob_map, skimage.morphology.disk(EXPANSION_RATE))
+    pred_prob_map = skimage.transform.resize(pred_label, mask_shape) 
     pred_mask = pred_prob_map > thresh
+    pred_mask = skimage.morphology.skeletonize(pred_mask.astype(np.uint8))
     pred_edge_img = (255. * pred_mask).astype(np.uint8)
     return pred_edge_img
 
