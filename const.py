@@ -43,9 +43,9 @@ class PHOTO(enum.Enum):
     FRONTAL = 4
     
     
-NUM_PC = 10 
-NUM_POINT = 1500
-PG_SHAPE = (NUM_POINT, 3)
+NUM_PC = 10 # num of modes of deformation for each tooth used in reconstruction
+NUM_POINT = 1500 # num of points to represent tooth surface used in SSM
+PG_SHAPE = (NUM_POINT, 3) 
 
 # FDI TOOTH NUMEBRING
 UPPER_INDICES = [11,12,13,14,15,16,17,21,22,23,24,25,26,27] # ignore wisdom teeth

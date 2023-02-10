@@ -10,17 +10,20 @@ import psutil
 import h5py
 from emopt5views import EMOpt5Views
 from const import *
+from segmentation import ASPP_UNet, predict_teeth_contour
 
 
  
-
 SSM_DIR = r"./ssm/eigValVec/"
 REGIS_PARAM_DIR = r"./ssm/cpdGpParams/"
-
-STAGE0_MAT_DIR = r"./stage0-mat/"
+TEMP_DIR = r"./demo/_temp/"
 DEMO_H5_DIR = r"./demo/h5/"
 DEMO_MESH_DIR = r"./demo/mesh/"
-LOG_DIR = r"./log/"
+REF_MESH_DIR = r"./demo/ref_mesh/"
+os.makedirs(TEMP_DIR, exist_ok=True)
+os.makedirs(DEMO_H5_DIR, exist_ok=True)
+os.makedirs(DEMO_MESH_DIR, exist_ok=True)
+
 NUM_CPUS = psutil.cpu_count(logical=False)
 print = functools.partial(print, flush=True)
 
@@ -33,8 +36,8 @@ def run_emopt(emopt):
     print("-"*100)
     print("Start optimization.")
 
-    stage0initMatFile = os.path.join(STAGE0_MAT_DIR, "E-step-result-stage0-init.mat")
-    stage0finalMatFile = os.path.join(STAGE0_MAT_DIR, "E-step-result-stage0-final.mat")
+    stage0initMatFile = os.path.join(TEMP_DIR, "E-step-result-stage0-init.mat")
+    stage0finalMatFile = os.path.join(TEMP_DIR, "E-step-result-stage0-final.mat")
 
     # grid search parallelled by Ray
     print("-"*100)
@@ -146,11 +149,11 @@ def evaluation(h5File, X_Ref_Upper, X_Ref_Lower):
     _X_Ref = X_Ref_Upper + X_Ref_Lower # List concat
     print("Compare prediction shape aligned by similarity registration with ground truth.")
     with_scale = True
-    T_Upper = pm_util.computeTransMat(X_Pred_Upper.reshape(-1,3), np.concatenate(X_Ref_Upper), with_scale=with_scale)
-    T_Lower = pm_util.computeTransMat(X_Pred_Lower.reshape(-1,3), np.concatenate(X_Ref_Lower), with_scale=with_scale)
+    TX_Upper = pm_util.getAlignedSrcPointCloud(X_Pred_Upper.reshape(-1,3), np.concatenate(X_Ref_Upper), with_scale=with_scale)
+    TX_Lower = pm_util.getAlignedSrcPointCloud(X_Pred_Lower.reshape(-1,3), np.concatenate(X_Ref_Lower), with_scale=with_scale)
 
-    TX_Pred_Upper = np.matmul(X_Pred_Upper, T_Upper[:3,:3]) + T_Upper[3,:3]
-    TX_Pred_Lower = np.matmul(X_Pred_Lower, T_Lower[:3,:3]) + T_Lower[3,:3]
+    TX_Pred_Upper = TX_Upper.reshape(-1, NUM_POINT, 3)
+    TX_Pred_Lower = TX_Lower.reshape(-1, NUM_POINT, 3)
     _TX_Pred = np.concatenate([TX_Pred_Upper, TX_Pred_Lower])
 
     RMSD_T_pred = metric.computeRMSD(_X_Ref, _TX_Pred)
@@ -169,34 +172,16 @@ def evaluation(h5File, X_Ref_Upper, X_Ref_Lower):
 
 
         
-
-
-@ray.remote
-def createAlignedPredMeshes(h5File, X_Ref_Upper, X_Ref_Lower, save_name, meshDir):
-    '''
-    h5file: emopt result saved in h5 format
-    X_Ref_Upper, X_Ref_Lower: List of numpy arrays
-    '''
+def create_mesh_from_emopt_h5File(h5File, meshDir, save_name):
     with h5py.File(h5File, 'r') as f:
         grp = f["EMOPT"]
         X_Pred_Upper = grp["UPPER_PRED"][:]
         X_Pred_Lower = grp["LOWER_PRED"][:]
-    with_scale = True
-    T_Upper = pm_util.computeTransMat(X_Pred_Upper.reshape(-1,3), np.concatenate(X_Ref_Upper), with_scale=with_scale)
-    T_Lower = pm_util.computeTransMat(X_Pred_Lower.reshape(-1,3), np.concatenate(X_Ref_Lower), with_scale=with_scale)
-
-    TX_Pred_Upper = np.matmul(X_Pred_Upper, T_Upper[:3,:3]) + T_Upper[3,:3]
-    TX_Pred_Lower = np.matmul(X_Pred_Lower, T_Lower[:3,:3]) + T_Lower[3,:3]
 
     X_Pred_Upper_Meshes = [pm_util.surfaceVertices2WatertightO3dMesh(pg) for pg in X_Pred_Upper]
     X_Pred_Lower_Meshes = [pm_util.surfaceVertices2WatertightO3dMesh(pg) for pg in X_Pred_Lower]
     Pred_Upper_Mesh = pm_util.mergeO3dTriangleMeshes(X_Pred_Upper_Meshes)
     Pred_Lower_Mesh = pm_util.mergeO3dTriangleMeshes(X_Pred_Lower_Meshes)
-
-    TX_Pred_Upper_Meshes = [pm_util.surfaceVertices2WatertightO3dMesh(pg) for pg in TX_Pred_Upper]
-    TX_Pred_Lower_Meshes = [pm_util.surfaceVertices2WatertightO3dMesh(pg) for pg in TX_Pred_Lower]
-    Aligned_Pred_Upper_Mesh = pm_util.mergeO3dTriangleMeshes(TX_Pred_Upper_Meshes)
-    Aligned_Pred_Lower_Mesh = pm_util.mergeO3dTriangleMeshes(TX_Pred_Lower_Meshes)
 
     demoMeshDir = os.path.join(meshDir, "{}/".format(save_name))
     os.makedirs(demoMeshDir, exist_ok=True)
@@ -205,17 +190,12 @@ def createAlignedPredMeshes(h5File, X_Ref_Upper, X_Ref_Lower, save_name, meshDir
                         os.path.join(demoMeshDir,"Pred_Upper_Mesh_Tag={}.obj".format(save_name)))
     pm_util.exportTriMeshObj(np.asarray(Pred_Lower_Mesh.vertices), np.asarray(Pred_Lower_Mesh.triangles), \
                         os.path.join(demoMeshDir,"Pred_Lower_Mesh_Tag={}.obj".format(save_name)))
-    pm_util.exportTriMeshObj(np.asarray(Aligned_Pred_Upper_Mesh.vertices), np.asarray(Aligned_Pred_Upper_Mesh.triangles), \
-                        os.path.join(demoMeshDir,"Aligned_Pred_Upper_Mesh_Tag={}.obj".format(save_name)))
-    pm_util.exportTriMeshObj(np.asarray(Aligned_Pred_Lower_Mesh.vertices), np.asarray(Aligned_Pred_Lower_Mesh.triangles), \
-                        os.path.join(demoMeshDir,"Aligned_Pred_Lower_Mesh_Tag={}.obj".format(save_name)))
 
 
 
 
 
-def main():
-    tag = "emopt-demo"
+def main(tag="0"):
     Mu, SqrtEigVals, Sigma = proj.loadMuEigValSigma(SSM_DIR, numPC=NUM_PC)
     Mu_normals = EMOpt5Views.computePointNormals(Mu)
 
@@ -224,38 +204,54 @@ def main():
     PoseCovMats = np.load(os.path.join(REGIS_PARAM_DIR, "PoseCovMats.npy")) # Covariance matrix of tooth pose for each tooth, shape=(28,6,6)
     ScaleCovMat = np.load(os.path.join(REGIS_PARAM_DIR, "ScaleCovMat.npy")) # Covariance matrix of scales for each tooth, shape=(28,28)
 
-    str_photo_types = ["upperPhoto","lowerPhoto","leftPhoto","rightPhoto","frontalPhoto"]
     photoTypes = [PHOTO.UPPER, PHOTO.LOWER, PHOTO.LEFT, PHOTO.RIGHT, PHOTO.FRONTAL]
     VISIBLE_MASKS = [MASK_UPPER, MASK_LOWER, MASK_LEFT, MASK_RIGHT, MASK_FRONTAL]
-    TOOTH_EXIST_MASK = np.ones((28,), np.bool_) # tooth existence of the patient
     
-    LogFile = os.path.join(LOG_DIR, "Tag={}.log".format(tag))
+    tooth_exist_mask = TOOTH_EXIST_MASK[tag]
+    temp_img_dir = r"./seg/valid/image/"
+    LogFile = os.path.join(TEMP_DIR, "Tag={}.log".format(tag))
     if os.path.exists(LogFile):
         os.remove(LogFile)
     log = open(LogFile, "a", encoding='utf-8')
     sys.stdout = log
         
+    # teeth boundary segmentation model
+    weight_ckpt = r".\seg\weights\weights-teeth-boundary-model.h5"
+    model = ASPP_UNet(IMG_SHAPE, filters=[16,32,64,128,256]) 
+    model.load_weights(weight_ckpt)
     
-    # TODO
-    edgeMasks = [np.empty((800,600)),] * 5
-    X_Ref_Upper = [np.empty((1500,3)),] * 14
-    X_Ref_Lower = [np.empty((1500,3)),] * 14
-
-
+    # predcit teeth boundary in each photo
+    edgeMasks = []
+    for phtype in photoTypes:
+        imgfile = os.path.join(temp_img_dir, f"{tag}-{phtype.value}.png")
+        edge_mask = predict_teeth_contour(model, imgfile, resized_width=800) # resize image to (800,~600)
+        edgeMasks.append(edge_mask)
     
-    emopt = EMOpt5Views(edgeMasks, photoTypes, VISIBLE_MASKS, TOOTH_EXIST_MASK, Mu, Mu_normals, SqrtEigVals, Sigma, PoseCovMats, ScaleCovMat, transVecStd, rotVecStd)
+    del model # to release memory
+    
+    mask_u, mask_l = np.split(tooth_exist_mask, 2)
+    X_Ref_Upper = proj.read_demo_mesh_vertices_by_FDI(mesh_dir=REF_MESH_DIR, tag=tag, FDIs=np.array(UPPER_INDICES)[mask_u])
+    X_Ref_Lower = proj.read_demo_mesh_vertices_by_FDI(mesh_dir=REF_MESH_DIR, tag=tag, FDIs=np.array(LOWER_INDICES)[mask_l])
+
+    # run deformation-based 3d reconstruction
+    emopt = EMOpt5Views(edgeMasks, photoTypes, VISIBLE_MASKS, tooth_exist_mask, Mu, Mu_normals, SqrtEigVals, Sigma, PoseCovMats, ScaleCovMat, transVecStd, rotVecStd)
     emopt = run_emopt(emopt)
-    demoh5File = os.path.join(DEMO_H5_DIR, "emopt-demo.h5")
+    demoh5File = os.path.join(DEMO_H5_DIR, f"demo-tag={tag}.h5")
     emopt.saveDemo2H5(demoh5File)
+    
     evaluation(demoh5File, X_Ref_Upper, X_Ref_Lower)
-
+    
+    create_mesh_from_emopt_h5File(demoh5File, meshDir=DEMO_MESH_DIR, save_name=tag)
+    
     log.close()
 
 
 if __name__ == "__main__":
-    ray.init(num_cpus=4, num_gpus=1)  
-    main()
-            
+    ray.init(num_cpus=4, num_gpus=0)  
+    tag = "1" # demo tag name: "0" or "1" 
+    main(tag)
+    
+    
 
 
 

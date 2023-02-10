@@ -1270,5 +1270,8 @@ class EMOpt5Views(object):
             grp.create_dataset("ROT_ANGLE_XYZS", data=np.array(self.rotVecXYZs, dtype=np.double))
             grp.create_dataset("TRANS_VEC_XYZS", data=np.array(self.transVecXYZs, dtype=np.double))
             grp.create_dataset("FEATURE_VEC", data=np.array(self.featureVec, dtype=np.double))
+            
+            
+    
 
 

@@ -8,10 +8,10 @@ from tensorflow import keras
 from tensorflow.keras import layers
 from tensorflow.keras.callbacks import ModelCheckpoint
 import functools
+from const import *
 
  
-IMG_SHAPE = (512, 512, 3)
-LBL_SHAPE = IMG_SHAPE[:2]
+
 LOW_MEMORY = False
 EXPANSION_RATE = 3 
 ROOT_DIR = r"./seg/"
@@ -231,12 +231,14 @@ def get_contour_from_raw_pred(pred_label, mask_shape, thresh=0.5):
     return pred_edge_img
 
 
-def predict_teeth_contour(model, imgfile):
+def predict_teeth_contour(model, imgfile, resized_width=800):
     img = skimage.io.imread(imgfile)
     h, w = img.shape[:2]
+    scale = resized_width / w
     rimg = skimage.transform.resize(img, IMG_SHAPE)
-    raw_pred = model.predict(rimg)
-    edge_pred = get_contour_from_raw_pred(raw_pred, (h,w), thresh=0.5)
+    raw_pred = model.predict(rimg[None,:])
+    raw_pred = np.squeeze(raw_pred)
+    edge_pred = get_contour_from_raw_pred(raw_pred, (int(scale*h),int(scale*w)), thresh=0.5)
     return edge_pred
     
 
@@ -290,7 +292,10 @@ if __name__ == "__main__":
     
     weight_ckpt = os.path.join(ROOT_DIR, 'weights', r'weights-teeth-boundary-model.h5')
     model = ASPP_UNet(IMG_SHAPE, filters=[16,32,64,128,256]) 
+    
+    # Train the model
     # model = train(model, weight_ckpt, batch_size=2, epochs=50, lr=0.0005, loss_func=Dice_SSIM_loss)
+    
     model.load_weights(weight_ckpt)
     
     evaluate(model)

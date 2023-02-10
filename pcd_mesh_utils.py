@@ -4,6 +4,7 @@ import open3d as o3d
 import trimesh
 import numpy as np
 import copy
+import cycpd
 
 
 
@@ -100,21 +101,25 @@ def mergeO3dTriangleMeshes(o3dMeshes):
         aggMesh: open3d.geometry.TriangleMesh
     '''
     assert len(o3dMeshes) > 0
-    aggMesh = copy.deepcopy(o3dMeshes)
-    for _mesh in o3dMeshes:
+    aggMesh = copy.deepcopy(o3dMeshes[0])
+    for _mesh in o3dMeshes[1:]:
         aggMesh += _mesh
     return aggMesh
 
 
 
-def computeTransMat(X_src, X_target, with_scale=False):
+def getAlignedSrcPointCloud(X_src, X_target, with_scale=False):
     assert X_src.ndim == 2, "X_src array should be 2d."
     assert X_target.ndim == 2, "X_target array should be 2d."
+    ds_X_src = farthestPointDownSample(X_src, num_point_sampled=3000, return_flag=False)
+    ds_X_target = farthestPointDownSample(X_target, num_point_sampled=3000, return_flag=False)
+    ds_X_src = ds_X_src.astype(np.double)
+    ds_X_target = ds_X_target.astype(np.double)
+    reg = cycpd.rigid_registration(**{'X': ds_X_target,'Y': ds_X_src,'scale':with_scale,'max_iterations':100,'tolerance':0.1,'w':0,'verbose':True,'print_reg_params':True})
+    _,(s,r,t) = reg.register()
+    return s * np.dot(X_src, r) + t
     
-    
-    # CPD registration
-    
-    return np.eye(4)
+
 
 
 

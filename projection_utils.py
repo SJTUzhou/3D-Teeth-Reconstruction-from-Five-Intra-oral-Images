@@ -1,6 +1,7 @@
 import glob
 import os
 import numpy as np
+import open3d as o3d
 from const import *
 
 
@@ -25,5 +26,18 @@ def loadMuEigValSigma(ssmDir, numPC):
 
 
 
+
+
+def read_demo_mesh_vertices_by_FDI(mesh_dir, tag, FDIs):
+    mesh_vertices_by_FDI = []
+    for fdi in FDIs:
+        mshf = os.path.join(mesh_dir, str(tag), "byFDI", f"Ref_Mesh_Tag={tag}_FDI={fdi}.obj")
+        msh = o3d.io.read_triangle_mesh(mshf)
+        mesh_vertices_by_FDI.append(np.asarray(msh.vertices, np.float64))
+    return mesh_vertices_by_FDI
+
+
+        
+    
 
 
