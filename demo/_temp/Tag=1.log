@@ -1,0 +1,651 @@
+----------------------------------------------------------------------------------------------------
+Start optimization.
+----------------------------------------------------------------------------------------------------
+Start Grid Search.
+rela.t.z 0
+rela.t.z 3
+rela.t.z 6
+rela.t.z 0
+Estimate camera params of  PHOTO.FRONTAL
+PHOTO.FRONTAL - unique pred points: 358 - E-step loss: 9.66
+rela.t.z 3
+Estimate camera params of  PHOTO.FRONTAL
+PHOTO.FRONTAL - unique pred points: 345 - E-step loss: 10.14
+rela.t.z 6
+Estimate camera params of  PHOTO.FRONTAL
+PHOTO.FRONTAL - unique pred points: 311 - E-step loss: 10.03
+rela.t.z 0
+Best param guess:  0
+Estimate camera params of  PHOTO.FRONTAL
+--------------------------------------------------
+PHOTO.UPPER r.x [1.8849558 2.042035  2.1991148 2.3561945 2.5132742]
+Estimate camera params of  PHOTO.UPPER
+PHOTO.UPPER - unique pred points: 248 - E-step loss: 14.45
+Estimate camera params of  PHOTO.UPPER
+PHOTO.UPPER - unique pred points: 283 - E-step loss: 10.14
+Estimate camera params of  PHOTO.UPPER
+PHOTO.UPPER - unique pred points: 267 - E-step loss: 10.81
+Estimate camera params of  PHOTO.UPPER
+PHOTO.UPPER - unique pred points: 295 - E-step loss: 6.67
+Estimate camera params of  PHOTO.UPPER
+PHOTO.UPPER - unique pred points: 271 - E-step loss: 8.06
+Best param guess:  2.3561945
+Estimate camera params of  PHOTO.UPPER
+--------------------------------------------------
+PHOTO.LOWER r.x [-1.8849558 -2.042035  -2.1991148 -2.3561945 -2.5132742]
+Estimate camera params of  PHOTO.LOWER
+PHOTO.LOWER - unique pred points: 225 - E-step loss: 15.22
+Estimate camera params of  PHOTO.LOWER
+PHOTO.LOWER - unique pred points: 241 - E-step loss: 12.34
+Estimate camera params of  PHOTO.LOWER
+PHOTO.LOWER - unique pred points: 239 - E-step loss: 9.05
+Estimate camera params of  PHOTO.LOWER
+PHOTO.LOWER - unique pred points: 232 - E-step loss: 8.49
+Estimate camera params of  PHOTO.LOWER
+PHOTO.LOWER - unique pred points: 216 - E-step loss: 22.94
+Best param guess:  -2.3561945
+Estimate camera params of  PHOTO.LOWER
+--------------------------------------------------
+PHOTO.LEFT r.xyz [[ 3.11  0.   -0.49]
+ [ 3.05  0.   -0.73]
+ [ 2.99  0.   -0.97]
+ [ 2.9   0.   -1.2 ]
+ [ 2.8   0.   -1.43]]
+Estimate camera params of  PHOTO.LEFT
+PHOTO.LEFT - unique pred points: 204 - E-step loss: 17.01
+Estimate camera params of  PHOTO.LEFT
+PHOTO.LEFT - unique pred points: 239 - E-step loss: 6.48
+Estimate camera params of  PHOTO.LEFT
+PHOTO.LEFT - unique pred points: 222 - E-step loss: 17.68
+Estimate camera params of  PHOTO.LEFT
+PHOTO.LEFT - unique pred points: 207 - E-step loss: 19.95
+Estimate camera params of  PHOTO.LEFT
+PHOTO.LEFT - unique pred points: 221 - E-step loss: 19.27
+Best param guess:  [ 3.05  0.   -0.73]
+Estimate camera params of  PHOTO.LEFT
+--------------------------------------------------
+PHOTO.RIGHT r.xyz [[3.11 0.   0.49]
+ [3.05 0.   0.73]
+ [2.99 0.   0.97]
+ [2.9  0.   1.2 ]
+ [2.8  0.   1.43]]
+Estimate camera params of  PHOTO.RIGHT
+PHOTO.RIGHT - unique pred points: 228 - E-step loss: 14.13
+Estimate camera params of  PHOTO.RIGHT
+PHOTO.RIGHT - unique pred points: 237 - E-step loss: 13.43
+Estimate camera params of  PHOTO.RIGHT
+PHOTO.RIGHT - unique pred points: 227 - E-step loss: 14.09
+Estimate camera params of  PHOTO.RIGHT
+PHOTO.RIGHT - unique pred points: 220 - E-step loss: 17.21
+Estimate camera params of  PHOTO.RIGHT
+PHOTO.RIGHT - unique pred points: 217 - E-step loss: 16.02
+Best param guess:  [3.05 0.   0.73]
+Estimate camera params of  PHOTO.RIGHT
+--------------------------------------------------
+PHOTO.FRONTAL r.x [3.0787609 3.1415927 3.2044246]
+Estimate camera params of  PHOTO.FRONTAL
+PHOTO.FRONTAL - unique pred points: 340 - E-step loss: 9.69
+Estimate camera params of  PHOTO.FRONTAL
+PHOTO.FRONTAL - unique pred points: 358 - E-step loss: 9.66
+Estimate camera params of  PHOTO.FRONTAL
+PHOTO.FRONTAL - unique pred points: 347 - E-step loss: 11.09
+Best param guess:  3.1415927
+Estimate camera params of  PHOTO.FRONTAL
+--------------------------------------------------
+rela.t.z -3.0
+rela.t.z -2.0
+rela.t.z -1.0
+rela.t.z 0.0
+rela.t.z 1.0
+rela.t.z 2.0
+rela.t.z 3.0
+rela.t.z -3.0
+Estimate camera params of  PHOTO.LEFT
+PHOTO.LEFT - unique pred points: 222 - E-step loss: 12.05
+Estimate camera params of  PHOTO.RIGHT
+PHOTO.RIGHT - unique pred points: 229 - E-step loss: 12.93
+rela.t.z -2.0
+Estimate camera params of  PHOTO.LEFT
+PHOTO.LEFT - unique pred points: 221 - E-step loss: 12.51
+Estimate camera params of  PHOTO.RIGHT
+PHOTO.RIGHT - unique pred points: 220 - E-step loss: 12.88
+rela.t.z -1.0
+Estimate camera params of  PHOTO.LEFT
+PHOTO.LEFT - unique pred points: 222 - E-step loss: 13.30
+Estimate camera params of  PHOTO.RIGHT
+PHOTO.RIGHT - unique pred points: 226 - E-step loss: 13.48
+rela.t.z 0.0
+Estimate camera params of  PHOTO.LEFT
+PHOTO.LEFT - unique pred points: 239 - E-step loss: 6.48
+Estimate camera params of  PHOTO.RIGHT
+PHOTO.RIGHT - unique pred points: 237 - E-step loss: 13.43
+rela.t.z 1.0
+Estimate camera params of  PHOTO.LEFT
+PHOTO.LEFT - unique pred points: 248 - E-step loss: 4.75
+Estimate camera params of  PHOTO.RIGHT
+PHOTO.RIGHT - unique pred points: 227 - E-step loss: 13.56
+rela.t.z 2.0
+Estimate camera params of  PHOTO.LEFT
+PHOTO.LEFT - unique pred points: 236 - E-step loss: 13.27
+Estimate camera params of  PHOTO.RIGHT
+PHOTO.RIGHT - unique pred points: 230 - E-step loss: 13.05
+rela.t.z 3.0
+Estimate camera params of  PHOTO.LEFT
+PHOTO.LEFT - unique pred points: 231 - E-step loss: 7.02
+Estimate camera params of  PHOTO.RIGHT
+PHOTO.RIGHT - unique pred points: 244 - E-step loss: 9.24
+rela.t.z 3.0
+Best param guess:  3.0
+Estimate camera params of  PHOTO.LEFT
+Estimate camera params of  PHOTO.RIGHT
+--------------------------------------------------
+rela.t.y -7
+rela.t.y -6
+rela.t.y -5
+rela.t.y -4
+rela.t.y -7
+Estimate camera params of  PHOTO.LEFT
+PHOTO.LEFT - unique pred points: 212 - E-step loss: 11.17
+Estimate camera params of  PHOTO.RIGHT
+PHOTO.RIGHT - unique pred points: 244 - E-step loss: 10.22
+Estimate camera params of  PHOTO.FRONTAL
+PHOTO.FRONTAL - unique pred points: 363 - E-step loss: 7.06
+rela.t.y -6
+Estimate camera params of  PHOTO.LEFT
+PHOTO.LEFT - unique pred points: 215 - E-step loss: 12.15
+Estimate camera params of  PHOTO.RIGHT
+PHOTO.RIGHT - unique pred points: 238 - E-step loss: 11.66
+Estimate camera params of  PHOTO.FRONTAL
+PHOTO.FRONTAL - unique pred points: 367 - E-step loss: 7.96
+rela.t.y -5
+Estimate camera params of  PHOTO.LEFT
+PHOTO.LEFT - unique pred points: 231 - E-step loss: 7.02
+Estimate camera params of  PHOTO.RIGHT
+PHOTO.RIGHT - unique pred points: 244 - E-step loss: 9.24
+Estimate camera params of  PHOTO.FRONTAL
+PHOTO.FRONTAL - unique pred points: 345 - E-step loss: 10.14
+rela.t.y -4
+Estimate camera params of  PHOTO.LEFT
+PHOTO.LEFT - unique pred points: 225 - E-step loss: 8.78
+Estimate camera params of  PHOTO.RIGHT
+PHOTO.RIGHT - unique pred points: 231 - E-step loss: 10.99
+Estimate camera params of  PHOTO.FRONTAL
+PHOTO.FRONTAL - unique pred points: 327 - E-step loss: 14.04
+rela.t.y -5
+Best param guess:  -5
+Estimate camera params of  PHOTO.LEFT
+Estimate camera params of  PHOTO.RIGHT
+Estimate camera params of  PHOTO.FRONTAL
+--------------------------------------------------
+rela.t.x -1.0
+rela.t.x 0.0
+rela.t.x 1.0
+rela.t.x -1.0
+Estimate camera params of  PHOTO.FRONTAL
+PHOTO.FRONTAL - unique pred points: 333 - E-step loss: 9.80
+rela.t.x 0.0
+Estimate camera params of  PHOTO.FRONTAL
+PHOTO.FRONTAL - unique pred points: 345 - E-step loss: 10.14
+rela.t.x 1.0
+Estimate camera params of  PHOTO.FRONTAL
+PHOTO.FRONTAL - unique pred points: 339 - E-step loss: 9.15
+rela.t.x 1.0
+Best param guess:  1.0
+Estimate camera params of  PHOTO.FRONTAL
+--------------------------------------------------
+PHOTO.UPPER - unique pred points: 292 - E-step loss: 5.75
+PHOTO.LOWER - unique pred points: 227 - E-step loss: 7.97
+PHOTO.LEFT - unique pred points: 233 - E-step loss: 5.26
+PHOTO.RIGHT - unique pred points: 237 - E-step loss: 9.04
+PHOTO.FRONTAL - unique pred points: 330 - E-step loss: 8.07
+----------------------------------------------------------------------------------------------------
+Start Stage 0.
+M-step loss: 1847.0231
+PHOTO.UPPER - unique pred points: 280 - E-step loss: 4.61
+PHOTO.LOWER - unique pred points: 228 - E-step loss: 7.03
+PHOTO.LEFT - unique pred points: 242 - E-step loss: 3.59
+PHOTO.RIGHT - unique pred points: 243 - E-step loss: 7.36
+PHOTO.FRONTAL - unique pred points: 322 - E-step loss: 7.39
+Sum of expectation step loss: 29.9775
+M-step loss: 1589.4244
+PHOTO.UPPER - unique pred points: 302 - E-step loss: 4.58
+PHOTO.LOWER - unique pred points: 246 - E-step loss: 7.03
+PHOTO.LEFT - unique pred points: 246 - E-step loss: 3.85
+PHOTO.RIGHT - unique pred points: 238 - E-step loss: 6.41
+PHOTO.FRONTAL - unique pred points: 341 - E-step loss: 6.36
+Sum of expectation step loss: 28.2236
+M-step loss: 1536.8123
+PHOTO.UPPER - unique pred points: 292 - E-step loss: 4.45
+PHOTO.LOWER - unique pred points: 236 - E-step loss: 7.04
+PHOTO.LEFT - unique pred points: 239 - E-step loss: 3.79
+PHOTO.RIGHT - unique pred points: 247 - E-step loss: 6.69
+PHOTO.FRONTAL - unique pred points: 382 - E-step loss: 5.30
+Sum of expectation step loss: 27.2719
+M-step loss: 1583.2385
+PHOTO.UPPER - unique pred points: 292 - E-step loss: 4.52
+PHOTO.LOWER - unique pred points: 229 - E-step loss: 7.27
+PHOTO.LEFT - unique pred points: 241 - E-step loss: 3.63
+PHOTO.RIGHT - unique pred points: 245 - E-step loss: 6.49
+PHOTO.FRONTAL - unique pred points: 374 - E-step loss: 5.19
+Sum of expectation step loss: 27.0956
+M-step loss: 1564.4351
+PHOTO.UPPER - unique pred points: 270 - E-step loss: 4.52
+PHOTO.LOWER - unique pred points: 234 - E-step loss: 7.09
+PHOTO.LEFT - unique pred points: 243 - E-step loss: 3.67
+PHOTO.RIGHT - unique pred points: 245 - E-step loss: 6.11
+PHOTO.FRONTAL - unique pred points: 363 - E-step loss: 4.94
+Sum of expectation step loss: 26.3280
+M-step loss: 1546.0482
+PHOTO.UPPER - unique pred points: 284 - E-step loss: 4.52
+PHOTO.LOWER - unique pred points: 236 - E-step loss: 7.13
+PHOTO.LEFT - unique pred points: 247 - E-step loss: 3.67
+PHOTO.RIGHT - unique pred points: 236 - E-step loss: 6.18
+PHOTO.FRONTAL - unique pred points: 368 - E-step loss: 4.77
+Sum of expectation step loss: 26.2671
+M-step loss: 1552.4527
+PHOTO.UPPER - unique pred points: 282 - E-step loss: 4.36
+PHOTO.LOWER - unique pred points: 234 - E-step loss: 7.20
+PHOTO.LEFT - unique pred points: 242 - E-step loss: 3.85
+PHOTO.RIGHT - unique pred points: 260 - E-step loss: 6.13
+PHOTO.FRONTAL - unique pred points: 369 - E-step loss: 4.61
+Sum of expectation step loss: 26.1461
+M-step loss: 1534.1814
+PHOTO.UPPER - unique pred points: 282 - E-step loss: 4.36
+PHOTO.LOWER - unique pred points: 234 - E-step loss: 7.20
+PHOTO.LEFT - unique pred points: 242 - E-step loss: 3.85
+PHOTO.RIGHT - unique pred points: 260 - E-step loss: 6.13
+PHOTO.FRONTAL - unique pred points: 369 - E-step loss: 4.61
+Sum of expectation step loss: 26.1461
+M-step loss: 1534.1814
+PHOTO.UPPER - unique pred points: 282 - E-step loss: 4.36
+PHOTO.LOWER - unique pred points: 234 - E-step loss: 7.20
+PHOTO.LEFT - unique pred points: 242 - E-step loss: 3.85
+PHOTO.RIGHT - unique pred points: 260 - E-step loss: 6.13
+PHOTO.FRONTAL - unique pred points: 369 - E-step loss: 4.61
+Sum of expectation step loss: 26.1461
+M-step loss: 1534.1814
+PHOTO.UPPER - unique pred points: 282 - E-step loss: 4.36
+PHOTO.LOWER - unique pred points: 234 - E-step loss: 7.20
+PHOTO.LEFT - unique pred points: 242 - E-step loss: 3.85
+PHOTO.RIGHT - unique pred points: 260 - E-step loss: 6.13
+PHOTO.FRONTAL - unique pred points: 369 - E-step loss: 4.61
+Sum of expectation step loss: 26.1461
+Early stop with last 3 e-step loss 26.1461, 26.1461, 26.1461
+----------------------------------------------------------------------------------------------------
+Start Stage 1.
+M-step loss: 1512.1970
+PHOTO.UPPER - unique pred points: 295 - E-step loss: 4.67
+PHOTO.LOWER - unique pred points: 231 - E-step loss: 6.71
+PHOTO.LEFT - unique pred points: 251 - E-step loss: 3.97
+PHOTO.RIGHT - unique pred points: 235 - E-step loss: 5.85
+PHOTO.FRONTAL - unique pred points: 359 - E-step loss: 4.86
+Sum of expectation step loss: 26.0525
+M-step loss: 1495.6894
+PHOTO.UPPER - unique pred points: 275 - E-step loss: 4.93
+PHOTO.LOWER - unique pred points: 244 - E-step loss: 5.64
+PHOTO.LEFT - unique pred points: 239 - E-step loss: 4.11
+PHOTO.RIGHT - unique pred points: 245 - E-step loss: 6.14
+PHOTO.FRONTAL - unique pred points: 374 - E-step loss: 4.74
+Sum of expectation step loss: 25.5565
+M-step loss: 1427.9631
+PHOTO.UPPER - unique pred points: 267 - E-step loss: 6.36
+PHOTO.LOWER - unique pred points: 253 - E-step loss: 5.07
+PHOTO.LEFT - unique pred points: 253 - E-step loss: 4.42
+PHOTO.RIGHT - unique pred points: 240 - E-step loss: 6.38
+PHOTO.FRONTAL - unique pred points: 380 - E-step loss: 4.68
+Sum of expectation step loss: 26.9144
+Early stop with last 3 e-step loss 26.0525, 25.5565, 26.9144
+emopt.rowScaleXZ:  [0.9976516 0.9244325]
+approx tooth scale:  0.9733851179263507
+Accept Stage 1.
+PHOTO.UPPER - unique pred points: 267 - E-step loss: 6.36
+PHOTO.LOWER - unique pred points: 253 - E-step loss: 5.07
+PHOTO.LEFT - unique pred points: 253 - E-step loss: 4.42
+PHOTO.RIGHT - unique pred points: 240 - E-step loss: 6.38
+PHOTO.FRONTAL - unique pred points: 380 - E-step loss: 4.68
+----------------------------------------------------------------------------------------------------
+Start Stage 2.
+M-step loss: 1112.2196
+PHOTO.UPPER - unique pred points: 289 - E-step loss: 5.13
+PHOTO.LOWER - unique pred points: 278 - E-step loss: 2.63
+PHOTO.LEFT - unique pred points: 266 - E-step loss: 2.83
+PHOTO.RIGHT - unique pred points: 257 - E-step loss: 3.56
+PHOTO.FRONTAL - unique pred points: 377 - E-step loss: 3.75
+Sum of expectation step loss: 17.8950
+M-step loss: 852.0309
+PHOTO.UPPER - unique pred points: 292 - E-step loss: 3.66
+PHOTO.LOWER - unique pred points: 278 - E-step loss: 2.34
+PHOTO.LEFT - unique pred points: 259 - E-step loss: 3.14
+PHOTO.RIGHT - unique pred points: 252 - E-step loss: 2.88
+PHOTO.FRONTAL - unique pred points: 375 - E-step loss: 3.61
+Sum of expectation step loss: 15.6317
+M-step loss: 696.3145
+PHOTO.UPPER - unique pred points: 283 - E-step loss: 3.62
+PHOTO.LOWER - unique pred points: 283 - E-step loss: 2.30
+PHOTO.LEFT - unique pred points: 260 - E-step loss: 3.40
+PHOTO.RIGHT - unique pred points: 260 - E-step loss: 2.64
+PHOTO.FRONTAL - unique pred points: 358 - E-step loss: 3.54
+Sum of expectation step loss: 15.5003
+M-step loss: 688.6688
+PHOTO.UPPER - unique pred points: 279 - E-step loss: 3.57
+PHOTO.LOWER - unique pred points: 284 - E-step loss: 2.32
+PHOTO.LEFT - unique pred points: 252 - E-step loss: 3.11
+PHOTO.RIGHT - unique pred points: 257 - E-step loss: 2.17
+PHOTO.FRONTAL - unique pred points: 371 - E-step loss: 3.44
+Sum of expectation step loss: 14.6141
+M-step loss: 663.4421
+PHOTO.UPPER - unique pred points: 297 - E-step loss: 3.55
+PHOTO.LOWER - unique pred points: 287 - E-step loss: 2.58
+PHOTO.LEFT - unique pred points: 255 - E-step loss: 3.55
+PHOTO.RIGHT - unique pred points: 263 - E-step loss: 2.15
+PHOTO.FRONTAL - unique pred points: 361 - E-step loss: 3.28
+Sum of expectation step loss: 15.1123
+Early stop with last 3 e-step loss 15.5003, 14.6141, 15.1123
+Compare prediction shape aligned by similarity registration with ground truth.
+Iteration:1
+ML:  5909.898; 	ML change (error):  5909.898; 	Sigma^2:   129.692; 	Sigma^2 change:   286.972
+[                                                                        ]
+Iteration:2
+ML:  2810.373; 	ML change (error):  3099.525; 	Sigma^2:    62.236; 	Sigma^2 change:    67.456
+[=                                                                       ]
+Iteration:3
+ML:   680.408; 	ML change (error):  2129.965; 	Sigma^2:    28.983; 	Sigma^2 change:    33.253
+[==                                                                      ]
+Iteration:4
+ML: -1159.765; 	ML change (error):  1840.174; 	Sigma^2:    15.902; 	Sigma^2 change:    13.081
+[==                                                                      ]
+Iteration:5
+ML: -2294.149; 	ML change (error):  1134.384; 	Sigma^2:    10.255; 	Sigma^2 change:     5.646
+[===                                                                     ]
+Iteration:6
+ML: -2942.305; 	ML change (error):   648.156; 	Sigma^2:     7.354; 	Sigma^2 change:     2.901
+[====                                                                    ]
+Iteration:7
+ML: -3341.988; 	ML change (error):   399.683; 	Sigma^2:     5.627; 	Sigma^2 change:     1.728
+[=====                                                                   ]
+Iteration:8
+ML: -3617.237; 	ML change (error):   275.249; 	Sigma^2:     4.481; 	Sigma^2 change:     1.146
+[=====                                                                   ]
+Iteration:9
+ML: -3826.657; 	ML change (error):   209.420; 	Sigma^2:     3.661; 	Sigma^2 change:     0.820
+[======                                                                  ]
+Iteration:10
+ML: -3999.083; 	ML change (error):   172.425; 	Sigma^2:     3.042; 	Sigma^2 change:     0.619
+[=======                                                                 ]
+Iteration:11
+ML: -4149.571; 	ML change (error):   150.488; 	Sigma^2:     2.557; 	Sigma^2 change:     0.485
+[=======                                                                 ]
+Iteration:12
+ML: -4286.264; 	ML change (error):   136.693; 	Sigma^2:     2.167; 	Sigma^2 change:     0.389
+[========                                                                ]
+Iteration:13
+ML: -4413.433; 	ML change (error):   127.169; 	Sigma^2:     1.850; 	Sigma^2 change:     0.317
+[=========                                                               ]
+Iteration:14
+ML: -4532.944; 	ML change (error):   119.511; 	Sigma^2:     1.590; 	Sigma^2 change:     0.260
+[==========                                                              ]
+Iteration:15
+ML: -4645.098; 	ML change (error):   112.153; 	Sigma^2:     1.377; 	Sigma^2 change:     0.214
+[==========                                                              ]
+Iteration:16
+ML: -4749.242; 	ML change (error):   104.145; 	Sigma^2:     1.202; 	Sigma^2 change:     0.175
+[===========                                                             ]
+Iteration:17
+ML: -4844.306; 	ML change (error):    95.064; 	Sigma^2:     1.059; 	Sigma^2 change:     0.143
+[============                                                            ]
+Iteration:18
+ML: -4929.253; 	ML change (error):    84.948; 	Sigma^2:     0.942; 	Sigma^2 change:     0.116
+[============                                                            ]
+Iteration:19
+ML: -5003.425; 	ML change (error):    74.172; 	Sigma^2:     0.848; 	Sigma^2 change:     0.094
+[=============                                                           ]
+Iteration:20
+ML: -5066.714; 	ML change (error):    63.289; 	Sigma^2:     0.773; 	Sigma^2 change:     0.076
+[==============                                                          ]
+Iteration:21
+ML: -5119.575; 	ML change (error):    52.861; 	Sigma^2:     0.712; 	Sigma^2 change:     0.061
+[===============                                                         ]
+Iteration:22
+ML: -5162.907; 	ML change (error):    43.332; 	Sigma^2:     0.663; 	Sigma^2 change:     0.049
+[===============                                                         ]
+Iteration:23
+ML: -5197.875; 	ML change (error):    34.968; 	Sigma^2:     0.624; 	Sigma^2 change:     0.039
+[================                                                        ]
+Iteration:24
+ML: -5225.735; 	ML change (error):    27.860; 	Sigma^2:     0.592; 	Sigma^2 change:     0.031
+[=================                                                       ]
+Iteration:25
+ML: -5247.704; 	ML change (error):    21.969; 	Sigma^2:     0.567; 	Sigma^2 change:     0.025
+[==================                                                      ]
+Iteration:26
+ML: -5264.879; 	ML change (error):    17.175; 	Sigma^2:     0.547; 	Sigma^2 change:     0.020
+[==================                                                      ]
+Iteration:27
+ML: -5278.207; 	ML change (error):    13.328; 	Sigma^2:     0.531; 	Sigma^2 change:     0.016
+[===================                                                     ]
+Iteration:28
+ML: -5288.485; 	ML change (error):    10.277; 	Sigma^2:     0.518; 	Sigma^2 change:     0.013
+[====================                                                    ]
+Iteration:29
+ML: -5296.367; 	ML change (error):     7.882; 	Sigma^2:     0.507; 	Sigma^2 change:     0.010
+[====================                                                    ]
+Iteration:30
+ML: -5302.388; 	ML change (error):     6.021; 	Sigma^2:     0.499; 	Sigma^2 change:     0.008
+[=====================                                                   ]
+Iteration:31
+ML: -5306.976; 	ML change (error):     4.588; 	Sigma^2:     0.492; 	Sigma^2 change:     0.007
+[======================                                                  ]
+Iteration:32
+ML: -5310.467; 	ML change (error):     3.491; 	Sigma^2:     0.487; 	Sigma^2 change:     0.005
+[=======================                                                 ]
+Iteration:33
+ML: -5313.122; 	ML change (error):     2.655; 	Sigma^2:     0.482; 	Sigma^2 change:     0.004
+[=======================                                                 ]
+Iteration:34
+ML: -5315.143; 	ML change (error):     2.021; 	Sigma^2:     0.479; 	Sigma^2 change:     0.004
+[========================                                                ]
+Iteration:35
+ML: -5316.683; 	ML change (error):     1.540; 	Sigma^2:     0.476; 	Sigma^2 change:     0.003
+[=========================                                               ]
+Iteration:36
+ML: -5317.857; 	ML change (error):     1.175; 	Sigma^2:     0.474; 	Sigma^2 change:     0.002
+[=========================                                               ]
+Iteration:37
+ML: -5318.755; 	ML change (error):     0.898; 	Sigma^2:     0.472; 	Sigma^2 change:     0.002
+[==========================                                              ]
+Iteration:38
+ML: -5319.442; 	ML change (error):     0.687; 	Sigma^2:     0.470; 	Sigma^2 change:     0.002
+[===========================                                             ]
+Iteration:39
+ML: -5319.969; 	ML change (error):     0.527; 	Sigma^2:     0.469; 	Sigma^2 change:     0.001
+[============================                                            ]
+Iteration:40
+ML: -5320.373; 	ML change (error):     0.404; 	Sigma^2:     0.468; 	Sigma^2 change:     0.001
+[============================                                            ]
+Iteration:41
+ML: -5320.684; 	ML change (error):     0.311; 	Sigma^2:     0.467; 	Sigma^2 change:     0.001
+[=============================                                           ]
+Iteration:42
+ML: -5320.923; 	ML change (error):     0.239; 	Sigma^2:     0.467; 	Sigma^2 change:     0.001
+[==============================                                          ]
+Iteration:43
+ML: -5321.108; 	ML change (error):     0.185; 	Sigma^2:     0.466; 	Sigma^2 change:     0.001
+[==============================                                          ]
+Iteration:44
+ML: -5321.250; 	ML change (error):     0.142; 	Sigma^2:     0.466; 	Sigma^2 change:     0.000
+[===============================                                         ]
+Iteration:45
+ML: -5321.360; 	ML change (error):     0.110; 	Sigma^2:     0.465; 	Sigma^2 change:     0.000
+[================================                                        ]
+Iteration:46
+ML: -5321.445; 	ML change (error):     0.085; 	Sigma^2:     0.465; 	Sigma^2 change:     0.000
+[=================================                                       ]
+========================================================================
+Registration Performance Metrics
+========================================================================
+Time to initialize EM: 0.39426350593566895
+Time to initialize registration: 0.0
+Average Expectation Time:                    0.1511 +/- 0.0421
+Average Maximization Time:                   0.0004 +/- 0.0005
+Maximization Times - Per individual step
+Average Update Transform Time:               0.0003 +/- 0.0004
+Average Transform Time:                      0.0001 +/- 0.0002
+Average Update Variance Time:                0.0000 +/- 0.0002
+
+Number of iterations performed:          46
+Error at time of finish:                 0.08507755008577078
+Iteration:1
+ML:  5412.368; 	ML change (error):  5412.368; 	Sigma^2:   116.867; 	Sigma^2 change:   261.004
+[                                                                        ]
+Iteration:2
+ML:  2271.131; 	ML change (error):  3141.237; 	Sigma^2:    55.060; 	Sigma^2 change:    61.807
+[=                                                                       ]
+Iteration:3
+ML:   117.086; 	ML change (error):  2154.045; 	Sigma^2:    25.896; 	Sigma^2 change:    29.164
+[==                                                                      ]
+Iteration:4
+ML: -1666.489; 	ML change (error):  1783.576; 	Sigma^2:    14.391; 	Sigma^2 change:    11.504
+[==                                                                      ]
+Iteration:5
+ML: -2755.434; 	ML change (error):  1088.944; 	Sigma^2:     9.366; 	Sigma^2 change:     5.025
+[===                                                                     ]
+Iteration:6
+ML: -3380.915; 	ML change (error):   625.482; 	Sigma^2:     6.749; 	Sigma^2 change:     2.617
+[====                                                                    ]
+Iteration:7
+ML: -3773.363; 	ML change (error):   392.448; 	Sigma^2:     5.171; 	Sigma^2 change:     1.578
+[=====                                                                   ]
+Iteration:8
+ML: -4050.082; 	ML change (error):   276.720; 	Sigma^2:     4.112; 	Sigma^2 change:     1.059
+[=====                                                                   ]
+Iteration:9
+ML: -4266.329; 	ML change (error):   216.247; 	Sigma^2:     3.347; 	Sigma^2 change:     0.766
+[======                                                                  ]
+Iteration:10
+ML: -4449.717; 	ML change (error):   183.388; 	Sigma^2:     2.762; 	Sigma^2 change:     0.584
+[=======                                                                 ]
+Iteration:11
+ML: -4614.939; 	ML change (error):   165.222; 	Sigma^2:     2.301; 	Sigma^2 change:     0.462
+[=======                                                                 ]
+Iteration:12
+ML: -4769.875; 	ML change (error):   154.936; 	Sigma^2:     1.928; 	Sigma^2 change:     0.373
+[========                                                                ]
+Iteration:13
+ML: -4918.245; 	ML change (error):   148.370; 	Sigma^2:     1.623; 	Sigma^2 change:     0.304
+[=========                                                               ]
+Iteration:14
+ML: -5060.952; 	ML change (error):   142.707; 	Sigma^2:     1.374; 	Sigma^2 change:     0.249
+[==========                                                              ]
+Iteration:15
+ML: -5197.004; 	ML change (error):   136.051; 	Sigma^2:     1.171; 	Sigma^2 change:     0.203
+[==========                                                              ]
+Iteration:16
+ML: -5324.340; 	ML change (error):   127.336; 	Sigma^2:     1.007; 	Sigma^2 change:     0.165
+[===========                                                             ]
+Iteration:17
+ML: -5440.617; 	ML change (error):   116.278; 	Sigma^2:     0.874; 	Sigma^2 change:     0.133
+[============                                                            ]
+Iteration:18
+ML: -5543.857; 	ML change (error):   103.239; 	Sigma^2:     0.768; 	Sigma^2 change:     0.106
+[============                                                            ]
+Iteration:19
+ML: -5632.872; 	ML change (error):    89.016; 	Sigma^2:     0.684; 	Sigma^2 change:     0.084
+[=============                                                           ]
+Iteration:20
+ML: -5707.452; 	ML change (error):    74.579; 	Sigma^2:     0.617; 	Sigma^2 change:     0.067
+[==============                                                          ]
+Iteration:21
+ML: -5768.289; 	ML change (error):    60.837; 	Sigma^2:     0.564; 	Sigma^2 change:     0.053
+[===============                                                         ]
+Iteration:22
+ML: -5816.752; 	ML change (error):    48.463; 	Sigma^2:     0.523; 	Sigma^2 change:     0.042
+[===============                                                         ]
+Iteration:23
+ML: -5854.584; 	ML change (error):    37.832; 	Sigma^2:     0.490; 	Sigma^2 change:     0.033
+[================                                                        ]
+Iteration:24
+ML: -5883.635; 	ML change (error):    29.052; 	Sigma^2:     0.465; 	Sigma^2 change:     0.026
+[=================                                                       ]
+Iteration:25
+ML: -5905.665; 	ML change (error):    22.029; 	Sigma^2:     0.444; 	Sigma^2 change:     0.020
+[==================                                                      ]
+Iteration:26
+ML: -5922.221; 	ML change (error):    16.556; 	Sigma^2:     0.429; 	Sigma^2 change:     0.016
+[==================                                                      ]
+Iteration:27
+ML: -5934.595; 	ML change (error):    12.374; 	Sigma^2:     0.416; 	Sigma^2 change:     0.012
+[===================                                                     ]
+Iteration:28
+ML: -5943.819; 	ML change (error):     9.224; 	Sigma^2:     0.406; 	Sigma^2 change:     0.010
+[====================                                                    ]
+Iteration:29
+ML: -5950.694; 	ML change (error):     6.875; 	Sigma^2:     0.399; 	Sigma^2 change:     0.008
+[====================                                                    ]
+Iteration:30
+ML: -5955.826; 	ML change (error):     5.132; 	Sigma^2:     0.393; 	Sigma^2 change:     0.006
+[=====================                                                   ]
+Iteration:31
+ML: -5959.668; 	ML change (error):     3.842; 	Sigma^2:     0.388; 	Sigma^2 change:     0.005
+[======================                                                  ]
+Iteration:32
+ML: -5962.554; 	ML change (error):     2.886; 	Sigma^2:     0.384; 	Sigma^2 change:     0.004
+[=======================                                                 ]
+Iteration:33
+ML: -5964.730; 	ML change (error):     2.176; 	Sigma^2:     0.381; 	Sigma^2 change:     0.003
+[=======================                                                 ]
+Iteration:34
+ML: -5966.377; 	ML change (error):     1.647; 	Sigma^2:     0.379; 	Sigma^2 change:     0.002
+[========================                                                ]
+Iteration:35
+ML: -5967.628; 	ML change (error):     1.251; 	Sigma^2:     0.377; 	Sigma^2 change:     0.002
+[=========================                                               ]
+Iteration:36
+ML: -5968.581; 	ML change (error):     0.953; 	Sigma^2:     0.375; 	Sigma^2 change:     0.002
+[=========================                                               ]
+Iteration:37
+ML: -5969.310; 	ML change (error):     0.728; 	Sigma^2:     0.374; 	Sigma^2 change:     0.001
+[==========================                                              ]
+Iteration:38
+ML: -5969.868; 	ML change (error):     0.558; 	Sigma^2:     0.373; 	Sigma^2 change:     0.001
+[===========================                                             ]
+Iteration:39
+ML: -5970.296; 	ML change (error):     0.428; 	Sigma^2:     0.373; 	Sigma^2 change:     0.001
+[============================                                            ]
+Iteration:40
+ML: -5970.626; 	ML change (error):     0.329; 	Sigma^2:     0.372; 	Sigma^2 change:     0.001
+[============================                                            ]
+Iteration:41
+ML: -5970.879; 	ML change (error):     0.254; 	Sigma^2:     0.371; 	Sigma^2 change:     0.001
+[=============================                                           ]
+Iteration:42
+ML: -5971.075; 	ML change (error):     0.196; 	Sigma^2:     0.371; 	Sigma^2 change:     0.000
+[==============================                                          ]
+Iteration:43
+ML: -5971.226; 	ML change (error):     0.151; 	Sigma^2:     0.371; 	Sigma^2 change:     0.000
+[==============================                                          ]
+Iteration:44
+ML: -5971.343; 	ML change (error):     0.117; 	Sigma^2:     0.370; 	Sigma^2 change:     0.000
+[===============================                                         ]
+Iteration:45
+ML: -5971.433; 	ML change (error):     0.090; 	Sigma^2:     0.370; 	Sigma^2 change:     0.000
+[================================                                        ]
+========================================================================
+Registration Performance Metrics
+========================================================================
+Time to initialize EM: 0.4036984443664551
+Time to initialize registration: 0.0
+Average Expectation Time:                    0.1471 +/- 0.0435
+Average Maximization Time:                   0.0002 +/- 0.0004
+Maximization Times - Per individual step
+Average Update Transform Time:               0.0002 +/- 0.0004
+Average Transform Time:                      0.0000 +/- 0.0001
+Average Update Variance Time:                0.0000 +/- 0.0002
+
+Number of iterations performed:          45
+Error at time of finish:                 0.09025871886115056
+[RMSD] Root Mean Squared surface Distance (mm): 0.5944
+[ASSD] average symmetric surface distance (mm): 0.5070
+[HD] Hausdorff distance (mm): 1.5286
+[CD] Chamfer distance (mm^2): 0.8734
+[DC] Volume Dice Coefficient: 0.8031
+[VOE] Volumetric Overlap Error: 32.19 %
