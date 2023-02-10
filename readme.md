@@ -5,7 +5,7 @@ Code refactoring are undergoing for better understanding.
 ## Overview
 We develop a template-based framework leveraging the prior shape knowledge of human teeth to reconstruct digital 3D models of upper and lower teeth from the typical five orthodontic intra-oral photographs. The framework consists of three phases: parameterization of the arrangement and shape of teeth through statistical shape modelling, U-net based teeth boundary extraction in intra-oral images, and 3D teeth reconstruction based on the prior parametric teeth model.
 <p align="center">
-    <img src=".\demo\assets\teeth_reconstruction_framework.png" alt="teeth reconstruction framework" width="600"/>
+    <img src=".\demo\assets\teeth_reconstruction_framework.png" alt="teeth reconstruction framework" width="800"/>
 </p>
 
 ## Reconstruction result
