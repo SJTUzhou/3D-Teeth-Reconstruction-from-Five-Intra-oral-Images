@@ -1,6 +1,8 @@
-Code refactoring are undergoing for better understanding.
-
 # Smartee project: Model-based 3D Teeth Reconstruction from Five Intra-oral Orthodontic Photos
+
+## Usage
+run demo: python main.py
+
 
 ## Overview
 Based on the work of Wu. et al. [1], we develop a template-based framework leveraging the prior shape knowledge of human teeth to reconstruct digital 3D models of upper and lower teeth from the typical five orthodontic intra-oral photographs. The framework consists of three phases: parameterization of the arrangement and shape of teeth through statistical shape modelling, U-net based teeth boundary extraction in intra-oral images, and 3D teeth reconstruction based on the prior parametric teeth model.
@@ -39,6 +41,3 @@ Maxillary view |  Mandibular view | Left view | Right view | Anterior view
 
 ## Reference
 [1] Wu, C., Bradley, D., Garrido, P., Zollhöfer, M., Theobalt, C., Gross, M. H., & Beeler, T. (2016). Model-based teeth reconstruction. ACM Trans. Graph., 35(6), 220-1.
-
-
-

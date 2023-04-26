@@ -3,9 +3,4 @@ __pycache__/
 *.py[cod]
 *$py.class
 *.mat
-
-
-
-
-
-
+.pre-commit-config.yaml
