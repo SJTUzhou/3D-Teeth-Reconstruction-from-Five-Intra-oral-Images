@@ -152,7 +152,7 @@ def meshProjection(visualizer, tag):
         skimage.io.imsave(output_img_file, skimage.img_as_ubyte(output))
 
 
-def main():
+def main(tag="0"):
     vis = o3d.visualization.Visualizer()
     vis.create_window(
         window_name="Image Screen Shot",
@@ -164,10 +164,10 @@ def main():
     opt.background_color = np.asarray([0, 0, 0])
     opt.mesh_color_option = o3d.visualization.MeshColorOption.Color  # Normal
 
-    for tag in ["0", "1"]:
-        meshProjection(vis, tag)
+    meshProjection(vis, tag)
     vis.destroy_window()
 
 
 if __name__ == "__main__":
-    main()
+    main(tag="0")
+    # main(tag="1")

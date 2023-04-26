@@ -1,7 +1,8 @@
 # Smartee project: Model-based 3D Teeth Reconstruction from Five Intra-oral Orthodontic Photos
 
 ## Usage
-run demo: python main.py
+run reconstruction demo: python main.py
+run visualization demo: python vis_utils.py
 
 
 ## Overview
