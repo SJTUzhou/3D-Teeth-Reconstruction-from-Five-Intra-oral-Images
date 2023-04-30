@@ -1026,6 +1026,9 @@ class EMOpt5Views(object):
             self.updateEdgePrediction(photoType)
             self.expectation(photoType, verbose, use_percentile=True)
 
+    def get_e_loss(self):
+        return np.sum(self.weightViews * self.loss_expectation_step)
+
     def save_expectation_step_result(self, fileName: str):
         xOptDict = self.get_current_e_step_result()
         xOptDict.update(
@@ -1068,7 +1071,7 @@ class EMOpt5Views(object):
         self.v0 = xOptDict["np_v0"]
         self.rela_rxyz = xOptDict["np_rela_rxyz"]
         self.rela_txyz = xOptDict["np_rela_txyz"]
-        self.rowScaleXZ = np.ones((2,))
+        self.rowScaleXZ = xOptDict["np_rowScaleXZ"]
         self.scales = xOptDict["np_scales"]
         self.rotVecXYZs = xOptDict["np_rotVecXYZs"]
         self.transVecXYZs = xOptDict["np_transVecXYZs"]

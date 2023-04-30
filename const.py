@@ -228,10 +228,6 @@ LOWER_INDICES = [
     47,
 ]  # ignore wisdom teeth
 
-# Teeth boundary segmentation
-IMG_SHAPE = (512, 512, 3)
-LBL_SHAPE = IMG_SHAPE[:2]
-
 
 SSM_DIR = r"./ssm/eigValVec/"
 REGIS_PARAM_DIR = r"./ssm/cpdGpParams/"

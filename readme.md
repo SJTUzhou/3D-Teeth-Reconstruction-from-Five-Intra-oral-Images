@@ -1,8 +1,18 @@
 # Smartee project: Model-based 3D Teeth Reconstruction from Five Intra-oral Orthodontic Photos
 
 ## Usage
-run reconstruction demo: python main.py
-run visualization demo: python vis_utils.py
+
+1） To train a teeth boundary segmentation model:
+
+1-1） Put your train and validation data into the folders in ./seg/train and ./seg/valid respectively
+
+1-2） Train a model with default settings, Run "python -m seg.run_train"
+
+Note: The labeled teeth boundary is dilated during training and evaluation to serve as the real label. It is because the manually labelel teeth boundary is too thin and not highly accurate for edge detection. The dilation process is controlled by a factor named EXPANSION_RATE in ./seg/seg_const.py
+
+2） To run teeth reconstrution demo: "python main.py"
+
+3） To visualize the projection of teeth reconstruction into input photo: "python visualization.py"
 
 
 ## Overview

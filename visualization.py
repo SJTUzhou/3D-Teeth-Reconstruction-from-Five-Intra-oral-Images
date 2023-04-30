@@ -2,15 +2,11 @@ import copy
 import os
 
 import h5py
-import matplotlib as mpl
-import matplotlib.pyplot as plt
 import numpy as np
 import open3d as o3d
-import scipy
 import skimage
 from scipy.spatial.transform import Rotation as RR
 
-import pcd_mesh_utils
 from const import *
 
 WINDOW_WIDTH = 1600
@@ -169,5 +165,5 @@ def main(tag="0"):
 
 
 if __name__ == "__main__":
-    main(tag="0")
-    # main(tag="1")
+    # main(tag="0")
+    main(tag="1")

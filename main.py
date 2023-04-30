@@ -1,6 +1,8 @@
 import functools
 import glob
 import os
+
+os.environ["CUDA_VISIBLE_DEVICES"] = "-1"  # run on CPU
 import sys
 
 import h5py
@@ -14,7 +16,9 @@ import pcd_mesh_utils as pm_util
 import recons_eval_metric as metric
 from const import *
 from emopt5views import EMOpt5Views
-from segmentation import ASPP_UNet, predict_teeth_contour
+from seg.seg_const import IMG_SHAPE
+from seg.seg_model import ASPP_UNet
+from seg.utils import predict_teeth_contour
 
 TEMP_DIR = r"./demo/_temp/"
 os.makedirs(TEMP_DIR, exist_ok=True)
@@ -46,9 +50,6 @@ def run_emopt(emopt: EMOpt5Views, verbose: bool = False):
     print("-" * 100)
     print("Start optimization.")
 
-    stage0initMatFile = os.path.join(TEMP_DIR, "E-step-result-stage0-init.mat")
-    stage0finalMatFile = os.path.join(TEMP_DIR, "E-step-result-stage0-final.mat")
-
     # grid search parallelled by Ray
     print("-" * 100)
     print("Start Grid Search.")
@@ -58,7 +59,13 @@ def run_emopt(emopt: EMOpt5Views, verbose: bool = False):
     emopt.gridSearchExtrinsicParams()
     emopt.gridSearchRelativePoseParams()
 
-    emopt.expectation_step_5Views(-1, verbose=True)
+    emopt.expectation_step_5Views(-1, verbose)
+    min_e_loss = emopt.get_e_loss()
+    optParamDict = emopt.get_current_e_step_result()
+
+    # stage0initMatFile = os.path.join(TEMP_DIR, "E-step-result-stage0-init.mat")
+    # stage0finalMatFile = os.path.join(TEMP_DIR, "E-step-result-stage0-final.mat")
+
     # emopt.save_expectation_step_result(stage0initMatFile) # save checkpoint
 
     maxiter = 20
@@ -69,16 +76,19 @@ def run_emopt(emopt: EMOpt5Views, verbose: bool = False):
     print("Start Stage 0.")
     stage = 0
 
-    # Continue from checkpoint "E-step-result-stage0-init.mat"
+    # # Continue from checkpoint "E-step-result-stage0-init.mat"
     # emopt.load_expectation_step_result(stage0initMatFile, stage)
-    # emopt.expectation_step_5Views(stage, verbose=True)
+    # emopt.expectation_step_5Views(stage, verbose)
 
     E_loss = []
     for it in range(stageIter[0]):
         emopt.maximization_step_5Views(stage, step=-1, maxiter=maxiter, verbose=False)
         print("M-step loss: {:.4f}".format(emopt.loss_maximization_step))
-        emopt.expectation_step_5Views(stage, verbose=True)
-        e_loss = np.sum(emopt.weightViews * emopt.loss_expectation_step)
+        emopt.expectation_step_5Views(stage, verbose)
+        e_loss = emopt.get_e_loss()
+        if e_loss < min_e_loss:
+            optParamDict = emopt.get_current_e_step_result()
+            min_e_loss = e_loss
         print("Sum of expectation step loss: {:.4f}".format(e_loss))
         if len(E_loss) >= 2 and e_loss >= np.mean(E_loss[-2:]):
             print(
@@ -90,7 +100,13 @@ def run_emopt(emopt: EMOpt5Views, verbose: bool = False):
             break
         else:
             E_loss.append(e_loss)
-    emopt.save_expectation_step_result(stage0finalMatFile)  # save checkpoint
+
+    # Load best result of stage 0
+    emopt.load_e_step_result_from_dict(optParamDict)
+    emopt.expectation_step_5Views(stage, verbose)
+    E_loss.append(min_e_loss)
+
+    # emopt.save_expectation_step_result(stage0finalMatFile)  # save checkpoint
 
     skipStage1Flag = False
     print("-" * 100)
@@ -100,8 +116,8 @@ def run_emopt(emopt: EMOpt5Views, verbose: bool = False):
     for it in range(stageIter[1]):
         emopt.maximization_step_5Views(stage, step=-1, maxiter=maxiter, verbose=False)
         print("M-step loss: {:.4f}".format(emopt.loss_maximization_step))
-        emopt.expectation_step_5Views(stage, verbose=True)
-        e_loss = np.sum(emopt.weightViews * emopt.loss_expectation_step)
+        emopt.expectation_step_5Views(stage, verbose)
+        e_loss = emopt.get_e_loss()
         print("Sum of expectation step loss: {:.4f}".format(e_loss))
         if e_loss >= E_loss[-1]:
             if it == 0:
@@ -115,32 +131,42 @@ def run_emopt(emopt: EMOpt5Views, verbose: bool = False):
         else:
             E_loss.append(e_loss)
 
-    print("emopt.rowScaleXZ: ", emopt.rowScaleXZ)
-    print("approx tooth scale: ", np.prod(emopt.rowScaleXZ) ** (1 / 3))
-
     # whether to skip stage1 to avoid extreme deformation
     if skipStage1Flag == True:
         print("Skip Stage 1; Reverse to Stage 0 final result.")
         emopt.rowScaleXZ = np.ones((2,))
-        emopt.load_expectation_step_result(stage0finalMatFile, stage=2)
+        emopt.load_e_step_result_from_dict(optParamDict)
+        # # Continue from checkpoint "E-step-result-stage0-final.mat"
+        # emopt.load_expectation_step_result(stage0finalMatFile, stage=2)
     else:
         print("Accept Stage 1.")
+        print("emopt.rowScaleXZ: ", emopt.rowScaleXZ)
+        print("approx tooth scale: ", np.prod(emopt.rowScaleXZ) ** (1 / 3))
         emopt.anistropicRowScale2ScalesAndTransVecs()
-    emopt.expectation_step_5Views(stage, verbose=True)
 
-    # Stage = 2
+    # Load best result of stage 1
+    emopt.expectation_step_5Views(stage, verbose)
+    e_loss = emopt.get_e_loss()
+    optParamDict = emopt.get_current_e_step_result()
+
+    # Stage = 2 and 3
     print("-" * 100)
-    print("Start Stage 2.")
+    print("Start Stage 2 and 3.")
     stage = 2
-    E_loss = []
+    E_loss = [
+        min_e_loss,
+    ]
     for it in range(stageIter[2]):
         emopt.maximization_step_5Views(stage, step=2, maxiter=maxiter, verbose=False)
         emopt.maximization_step_5Views(stage, step=3, maxiter=maxiter, verbose=False)
         emopt.maximization_step_5Views(stage=3, step=-1, maxiter=maxiter, verbose=False)
         emopt.maximization_step_5Views(stage, step=1, maxiter=maxiter, verbose=False)
         print("M-step loss: {:.4f}".format(emopt.loss_maximization_step))
-        emopt.expectation_step_5Views(stage=3, verbose=True)
-        e_loss = np.sum(emopt.weightViews * emopt.loss_expectation_step)
+        emopt.expectation_step_5Views(stage=3, verbose=verbose)
+        e_loss = emopt.get_e_loss()
+        if e_loss < min_e_loss:
+            optParamDict = emopt.get_current_e_step_result()
+            min_e_loss = e_loss
         print("Sum of expectation step loss: {:.4f}".format(e_loss))
         if len(E_loss) >= 2 and (e_loss >= np.mean(E_loss[-2:])):
             print(
@@ -151,6 +177,10 @@ def run_emopt(emopt: EMOpt5Views, verbose: bool = False):
             break
         else:
             E_loss.append(e_loss)
+
+    # Load best result of stage 2 and 3
+    emopt.load_e_step_result_from_dict(optParamDict)
+    emopt.expectation_step_5Views(stage=3, verbose=verbose)
 
     return emopt
 
@@ -314,5 +344,5 @@ def main(tag="0"):
 
 if __name__ == "__main__":
     ray.init(num_cpus=4, num_gpus=0)
-    tag = "0"  # demo tag name: "0" or "1"
+    tag = "1"  # demo tag name: "0" or "1"
     main(tag)
