@@ -51,4 +51,7 @@ Maxillary view |  Mandibular view | Left view | Right view | Anterior view
 
 
 ## Reference
-[1] Wu, C., Bradley, D., Garrido, P., Zollhöfer, M., Theobalt, C., Gross, M. H., & Beeler, T. (2016). Model-based teeth reconstruction. ACM Trans. Graph., 35(6), 220-1.
+
+[1] Yizhou Chen, Shuojie Gao, Puxun Tu, and Xiaojun Chen, Automatic 3D Teeth Reconstruction from Five Intra-oral Photos Using Parametric Teeth Model, IEEE Transactions on Visualization and Computer Graphics, 2023, DOI: 10.1109/TVCG.2023.3277914
+
+[2] Wu, C., Bradley, D., Garrido, P., Zollhöfer, M., Theobalt, C., Gross, M. H., & Beeler, T. (2016). Model-based teeth reconstruction. ACM Trans. Graph., 35(6), 220-1.
