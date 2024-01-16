@@ -1,0 +1,7 @@
+Align Tooth Index: 11 with reference tag: 0U
+reference pointcloud shape: (1500, 3)
+max point num:  (3000, 3)
+min point num:  (2719, 3)
+Start iteration 1/2
+GP low-rank approx. cumulative variance: 0.9903
+Finish computing eigVals and eigVecs of GP Registration
