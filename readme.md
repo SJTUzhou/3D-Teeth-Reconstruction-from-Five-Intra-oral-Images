@@ -1,5 +1,9 @@
 # Smartee project: Model-based 3D Teeth Reconstruction from Five Intra-oral Orthodontic Photos
 
+## preprocessing
+
+Please see cpdGp_align_ssm.py, ssm_utils.py, gp_non_rigid_registration.py
+
 ## Usage
 
 1） To train a teeth boundary segmentation model:
