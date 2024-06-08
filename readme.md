@@ -14,6 +14,8 @@ Please see cpdGp_align_ssm.py, ssm_utils.py, gp_non_rigid_registration.py
 
 Note: The labeled teeth boundary is dilated during training and evaluation to serve as the real label. It is because the manually labelel teeth boundary is too thin and not highly accurate for edge detection. The dilation process is controlled by a factor named EXPANSION_RATE in ./seg/seg_const.py
 
+Attention: the provided teeth boundary segmentation model is not accurate and a precise teeth boundary is important for the 3D following teeth reconstruction.
+
 2） To run teeth reconstrution demo: "python main.py"
 
 3） To visualize the projection of teeth reconstruction into input photo: "python visualization.py"
