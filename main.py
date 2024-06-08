@@ -298,7 +298,7 @@ def main(tag="0"):
     # predcit teeth boundary in each photo
     edgeMasks = []
     for phtype in PHOTO_TYPES:
-        imgfile = os.path.join(PHOTO_DIR, f"{tag}-{phtype.value}.png")
+        imgfile = glob.glob(os.path.join(PHOTO_DIR, f"{tag}-{phtype.value}.png"))[0]
         edge_mask = predict_teeth_contour(
             model, imgfile, resized_width=RECONS_IMG_WIDTH
         )  # resize image to (800,~600)
@@ -335,7 +335,7 @@ def main(tag="0"):
     demoh5File = os.path.join(DEMO_H5_DIR, f"demo-tag={tag}.h5")
     emopt.saveDemo2H5(demoh5File)
 
-    evaluation(demoh5File, X_Ref_Upper, X_Ref_Lower)
+    # evaluation(demoh5File, X_Ref_Upper, X_Ref_Lower)
 
     create_mesh_from_emopt_h5File(demoh5File, meshDir=DEMO_MESH_DIR, save_name=tag)
 
@@ -344,5 +344,5 @@ def main(tag="0"):
 
 if __name__ == "__main__":
     ray.init(num_cpus=4, num_gpus=0)
-    tag = "1"  # demo tag name: "0" or "1"
+    tag = "3"  # demo tag name: "0" or "1"
     main(tag)

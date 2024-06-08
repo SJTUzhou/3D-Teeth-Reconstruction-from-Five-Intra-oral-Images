@@ -1,4 +1,5 @@
 import copy
+import glob
 import os
 
 import h5py
@@ -94,7 +95,7 @@ def meshProjection(visualizer, tag):
     )
     photos = []
     for phtype in PHOTO_TYPES:
-        imgfile = os.path.join(PHOTO_DIR, f"{tag}-{phtype.value}.png")
+        imgfile = glob.glob(os.path.join(PHOTO_DIR, f"{tag}-{phtype.value}.*"))[0]
         img = skimage.io.imread(imgfile)
         h, w = img.shape[:2]
         scale = RECONS_IMG_WIDTH / w

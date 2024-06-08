@@ -3,7 +3,7 @@ import os
 
 import numpy as np
 
-# tooth existence of the patient
+# tooth existence of the patient: FDI numbering order 11-17, 21-27, 31-37, 41-47
 TOOTH_EXIST_MASK = {"0": np.ones((28,), np.bool_), "1": np.ones((28,), np.bool_)}
 
 
